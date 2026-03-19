@@ -27,7 +27,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
   const token = authHeader.slice(7);
 
   try {
-    const payload = await verify(token, JWT_SECRET);
+    const payload = await verify(token, JWT_SECRET, 'HS256');
 
     c.set('user', {
       id: payload.sub as string,
