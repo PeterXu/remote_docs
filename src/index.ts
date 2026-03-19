@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { serve } from '@hono/node-server';
 import { authMiddleware } from './middleware/auth';
 import { pdfRouter } from './routes/pdf';
 import { healthRouter } from './routes/health';
@@ -47,9 +48,9 @@ app.onError((err, c) => {
 // 启动服务器
 const port = parseInt(process.env.PORT || '3000');
 
-console.log(`🚀 docsvr running on port ${port}`);
-
-export default {
-  port,
+serve({
   fetch: app.fetch,
-};
+  port,
+});
+
+console.log(`🚀 docsvr running on port ${port}`);
