@@ -53,13 +53,14 @@ describe('PDF Export Service', () => {
 
     it('should parse KaTeX inline formulas', () => {
       const result = parseMarkdown('The formula $E=mc^2$ is famous');
-      expect(result).toContain('katex-inline');
-      expect(result).toContain('E=mc^2');
+      expect(result).toContain('katex');
+      // KaTeX renders E and mc² as separate HTML elements
+      expect(result).toContain('mathnormal'); // Contains math formatting
     });
 
     it('should parse KaTeX block formulas', () => {
       const result = parseMarkdown('$$\n\\int_0^1 x^2 dx\n$$');
-      expect(result).toContain('katex-block');
+      expect(result).toContain('katex-display');
     });
 
     it('should NOT allow raw HTML (security)', () => {

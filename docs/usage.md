@@ -102,6 +102,22 @@ Content-Type: application/json
 }
 ```
 
+**试卷模板 CSS 变量示例：**
+
+```json
+{
+  "documents": [{ "markdown": "# 期中考试\n\n## 一、选择题\n\n..." }],
+  "template": "exam",
+  "options": {
+    "cssVars": {
+      "font-size-body": "16px",
+      "line-height": "2.0",
+      "question-gap": "25px"
+    }
+  }
+}
+```
+
 **参数说明：**
 
 | 字段 | 类型 | 必需 | 说明 |
@@ -113,6 +129,7 @@ Content-Type: application/json
 | `options` | object | 否 | PDF 选项 |
 | `options.format` | string | 否 | 纸张格式：`A4`（默认）、`Letter` |
 | `options.margin` | object | 否 | 页边距设置 |
+| `options.cssVars` | object | 否 | CSS 变量覆盖（仅 exam 模板） |
 
 **限制：**
 - 最大 50 个文档
@@ -344,9 +361,38 @@ $$
 ### exam - 试卷模板
 
 专为教育试卷设计，包含：
-- 宋体字体
-- 题目不跨页
-- 答题区样式
+- 宋体/黑体字体
+- 题目不跨页（page-break-inside: avoid）
+- 自动题号（一、二、三 / 1. 2. 3. / (1)(2)(3)）
+- 答题区样式（可配置高度）
+- 填空下划线
+- 分数栏、考生信息栏、注意事项框
+
+**CSS 变量配置**（通过 `options.cssVars` 覆盖）：
+
+```json
+{
+  "template": "exam",
+  "options": {
+    "cssVars": {
+      "font-size-body": "16px",
+      "line-height": "2.0",
+      "question-gap": "25px",
+      "answer-min-height": "120px"
+    }
+  }
+}
+```
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `font-size-body` | 14px | 正文字号 |
+| `font-size-title` | 22px | 试卷标题字号 |
+| `line-height` | 1.8 | 行高 |
+| `question-gap` | 18px | 题目间距 |
+| `answer-min-height` | 80px | 答题区最小高度 |
+| `answer-bg-color` | #fafafa | 答题区背景色 |
+| `border-color` | #000 | 边框颜色 |
 
 ---
 

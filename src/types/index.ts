@@ -23,6 +23,8 @@ export interface PDFOptions {
     left?: string;
     right?: string;
   };
+  /** CSS variables to override template defaults, e.g. { "font-size-body": "16px" } */
+  cssVars?: Record<string, string>;
 }
 
 export interface ErrorResponse {

@@ -124,6 +124,13 @@ pdfRouter.post('/export', async (c) => {
   </div>`);
     }
 
+    // Generate CSS variables override if provided
+    const cssVarsOverride = body.options?.cssVars
+      ? `:root { ${Object.entries(body.options.cssVars)
+          .map(([key, value]) => `--${sanitizeKey(key)}: ${sanitizeValue(value)};`)
+          .join(' ')} }`
+      : '';
+
     // Generate complete HTML with page break styles
     const fullHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -137,6 +144,9 @@ ${katexCss}
 
 /* 模板样式 */
 ${template.css}
+
+/* CSS 变量覆盖 */
+${cssVarsOverride}
 
     /* Page break between sections */
     .document-section {
