@@ -65,7 +65,7 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Mark
 ## 项目结构
 
 ```
-remote_doc/
+remote_docs/
 ├── src/
 │   ├── index.ts              # 入口，Hono 应用
 │   ├── routes/
