@@ -7,6 +7,7 @@ import { serve } from '@hono/node-server';
 import { authMiddleware } from './middleware/auth';
 import { pdfRouter } from './routes/pdf';
 import { healthRouter } from './routes/health';
+import { serveUI } from './routes/ui';
 
 // Validate required environment variables at startup
 const requiredEnvVars = ['SUPABASE_JWT_SECRET'];
@@ -41,6 +42,10 @@ app.use(
 
 // Health check (no auth required)
 app.route('/api/v1/health', healthRouter);
+
+// Web UI (no auth required)
+app.get('/ui', serveUI);
+app.get('/ui/', serveUI);
 
 // PDF export (auth required)
 const protectedApi = new Hono();
