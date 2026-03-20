@@ -23,31 +23,33 @@ export const examTemplate: PDFTemplate = {
     /* 试卷标题 */
     h1 {
       text-align: center;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
-      margin-bottom: 20px;
-      border: none;
-      padding: 0;
+      margin: 0 0 5px 0;
+      padding-bottom: 10px;
+      border-bottom: 3px double #000;
     }
 
+    /* 大题标题 */
     h2 {
       font-size: 16px;
       font-weight: bold;
-      margin: 20px 0 10px;
-      border: none;
+      margin: 20px 0 12px 0;
       padding: 0;
+      border: none;
     }
 
+    /* 小题标题 */
     h3 {
       font-size: 14px;
       font-weight: bold;
-      margin: 15px 0 8px;
-      border: none;
+      margin: 12px 0 6px 0;
       padding: 0;
+      border: none;
     }
 
     /* 段落 */
-    p { margin: 10px 0; text-indent: 2em; }
+    p { margin: 10px 0; text-indent: 0; }
 
     /* 题目不拆分 */
     .question, li {

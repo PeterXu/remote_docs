@@ -1,11 +1,22 @@
 // src/routes/pdf.ts
 import { Hono } from 'hono';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { parseMarkdown } from '../services/markdown';
 import { generatePDF } from '../services/gotenberg';
 import { getTemplate, getTemplateList } from '../templates';
 import type { MultiPDFExportRequest, User } from '../types';
 
 export const pdfRouter = new Hono();
+
+// 加载 KaTeX CSS（启动时缓存）
+let katexCss: string;
+try {
+  katexCss = readFileSync(join(process.cwd(), 'node_modules/katex/dist/katex.min.css'), 'utf-8');
+} catch {
+  console.warn('KaTeX CSS not found, formulas may not render correctly');
+  katexCss = '';
+}
 
 // POST /api/v1/pdf/export
 pdfRouter.post('/export', async (c) => {
@@ -121,6 +132,10 @@ pdfRouter.post('/export', async (c) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Export</title>
   <style>
+/* KaTeX 样式 */
+${katexCss}
+
+/* 模板样式 */
 ${template.css}
 
     /* Page break between sections */
