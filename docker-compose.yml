@@ -1,22 +1,22 @@
 version: '3.8'
 
 services:
-  docsvr:
+  remote_docs:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - GOTENBERG_URL=http://gotenberg:3000
       - PORT=3000
+      - GOTENBERG_TIMEOUT=60000
     depends_on:
       - gotenberg
     restart: unless-stopped
 
   gotenberg:
     image: gotenberg/gotenberg:8
-    ports:
-      - "3001:3000"
     restart: unless-stopped
+    # Optional: Uncomment to expose Gotenberg directly
+    # ports:
+    #   - "3001:3000"

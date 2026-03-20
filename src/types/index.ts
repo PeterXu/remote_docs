@@ -4,10 +4,14 @@ export interface User {
   email: string;
 }
 
-export interface PDFExportRequest {
+export interface DocumentSection {
+  title?: string;
   markdown: string;
+}
+
+export interface MultiPDFExportRequest {
+  documents: DocumentSection[];
   template?: 'base' | 'github' | 'exam';
-  export_id: string;
   options?: PDFOptions;
 }
 
@@ -21,14 +25,9 @@ export interface PDFOptions {
   };
 }
 
-export interface PDFExportResponse {
-  success: boolean;
-  data?: {
-    export_id: string;
-    storage_path: string;
-    status: 'completed';
-  };
-  error?: {
+export interface ErrorResponse {
+  success: false;
+  error: {
     code: string;
     message: string;
   };
@@ -47,6 +46,5 @@ export interface HealthResponse {
   status: 'healthy' | 'unhealthy';
   services: {
     gotenberg: 'ok' | 'error';
-    supabase: 'ok' | 'error';
   };
 }

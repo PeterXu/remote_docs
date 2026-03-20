@@ -1,27 +1,22 @@
 // src/routes/health.ts
 import { Hono } from 'hono';
 import { checkGotenbergHealth } from '../services/gotenberg';
-import { checkSupabaseHealth } from '../services/supabase';
-import type { HealthResponse } from '../types';
 
 export const healthRouter = new Hono();
 
 // GET /api/v1/health
 healthRouter.get('/', async (c) => {
-  const [gotenbergOk, supabaseOk] = await Promise.all([
-    checkGotenbergHealth(),
-    checkSupabaseHealth(),
-  ]);
+  const gotenbergOk = await checkGotenbergHealth();
 
-  const allHealthy = gotenbergOk && supabaseOk;
+  const allHealthy = gotenbergOk;
 
-  const response: HealthResponse = {
-    status: allHealthy ? 'healthy' : 'unhealthy',
-    services: {
-    gotenberg: gotenbergOk ? 'ok' : 'error',
-    supabase: supabaseOk ? 'ok' : 'error',
-  },
-  };
-
-  return c.json(response, allHealthy ? 200 : 503);
+  return c.json(
+    {
+      status: allHealthy ? 'healthy' : 'unhealthy',
+      services: {
+        gotenberg: gotenbergOk ? 'ok' : 'error',
+      },
+    },
+    allHealthy ? 200 : 503
+  );
 });

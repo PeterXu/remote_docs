@@ -2,6 +2,7 @@
 import type { PDFOptions } from '../types';
 
 const GOTENBERG_URL = process.env.GOTENBERG_URL || 'http://localhost:3001';
+const REQUEST_TIMEOUT = parseInt(process.env.GOTENBERG_TIMEOUT || '60000');
 
 function mmToInch(mm: number): number {
   return mm / 25.4;
@@ -16,11 +17,11 @@ function parseMargin(marginStr: string | undefined, defaultMm: number): number {
 export async function generatePDF(html: string, options?: PDFOptions): Promise<Buffer> {
   const formData = new FormData();
 
-  // HTML文件
+  // HTML file
   const htmlBlob = new Blob([html], { type: 'text/html' });
   formData.append('file', htmlBlob, 'index.html');
 
-  // PDF选项
+  // PDF options
   const format = options?.format || 'A4';
   const paperWidth = format === 'A4' ? 8.27 : 8.5;
   const paperHeight = format === 'A4' ? 11.69 : 11;
@@ -31,7 +32,7 @@ export async function generatePDF(html: string, options?: PDFOptions): Promise<B
   const marginLeft = parseMargin(margin.left, 15);
   const marginRight = parseMargin(margin.right, 15);
 
-  // Gotenberg API选项
+  // Gotenberg API options
   formData.append('paperWidth', paperWidth.toString());
   formData.append('paperHeight', paperHeight.toString());
   formData.append('marginTop', marginTop.toString());
@@ -44,7 +45,7 @@ export async function generatePDF(html: string, options?: PDFOptions): Promise<B
   const response = await fetch(`${GOTENBERG_URL}/forms/chromium/convert/html`, {
     method: 'POST',
     body: formData,
-    signal: AbortSignal.timeout(60000),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT),
   });
 
   if (!response.ok) {

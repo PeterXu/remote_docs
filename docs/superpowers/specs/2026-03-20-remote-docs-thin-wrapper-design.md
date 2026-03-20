@@ -61,6 +61,13 @@ Content-Type: application/json
 }
 ```
 
+**Field Constraints**
+- `documents`: Required array, 1-50 items, max 10MB total markdown size
+- `documents[].title`: Optional string, displayed as section heading
+- `documents[].markdown`: Required string
+- `template`: Optional, defaults to "base". Invalid template ID returns `INVALID_TEMPLATE` error
+- `options`: Optional PDF settings
+
 **Success Response**
 - Status: 200
 - Content-Type: application/pdf
@@ -250,6 +257,7 @@ services:
 | INVALID_JSON | 400 | Malformed request body |
 | INVALID_REQUEST | 400 | Missing documents array |
 | EMPTY_DOCUMENTS | 400 | documents array is empty |
+| INVALID_TEMPLATE | 400 | Template ID does not exist |
 | PDF_GENERATION_FAILED | 500 | Gotenberg error |
 
 ## Performance Considerations

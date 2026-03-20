@@ -2,16 +2,15 @@
 import { Hono } from 'hono';
 import { parseMarkdown } from '../services/markdown';
 import { generatePDF } from '../services/gotenberg';
-import { uploadPDF, updateExportStatus } from '../services/supabase';
 import { getTemplate, getTemplateList } from '../templates';
-import type { PDFExportRequest, User } from '../types';
+import type { MultiPDFExportRequest, User } from '../types';
 
 export const pdfRouter = new Hono();
 
 // POST /api/v1/pdf/export
 pdfRouter.post('/export', async (c) => {
   const user = c.get('user') as User;
-  let body: PDFExportRequest;
+  let body: MultiPDFExportRequest;
 
   try {
     body = await c.req.json();
@@ -25,76 +24,116 @@ pdfRouter.post('/export', async (c) => {
     );
   }
 
-  // 验证请求
-  if (!body.markdown) {
+  // Validate documents array
+  if (!body.documents || !Array.isArray(body.documents)) {
     return c.json(
       {
         success: false,
-        error: { code: 'INVALID_MARKDOWN', message: 'Markdown content is required' },
+        error: { code: 'INVALID_REQUEST', message: 'documents array is required' },
       },
       400
     );
   }
 
-  if (!body.export_id) {
+  if (body.documents.length === 0) {
     return c.json(
       {
         success: false,
-        error: { code: 'INVALID_EXPORT_ID', message: 'export_id is required' },
+        error: { code: 'EMPTY_DOCUMENTS', message: 'documents array cannot be empty' },
+      },
+      400
+    );
+  }
+
+  // Validate each document
+  for (let i = 0; i < body.documents.length; i++) {
+    if (!body.documents[i].markdown) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'INVALID_REQUEST', message: `documents[${i}].markdown is required` },
+        },
+        400
+      );
+    }
+  }
+
+  // Validate template
+  const templateId = body.template || 'base';
+  const template = getTemplate(templateId);
+  if (!template) {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INVALID_TEMPLATE', message: `Template "${templateId}" does not exist` },
       },
       400
     );
   }
 
   try {
-    // 1. 解析Markdown
-    const contentHtml = parseMarkdown(body.markdown);
+    // Build HTML sections with page breaks
+    const sections: string[] = [];
 
-    // 2. 获取模板
-    const template = getTemplate(body.template || 'base');
+    for (const doc of body.documents) {
+      const contentHtml = parseMarkdown(doc.markdown);
 
-    // 3. 生成完整HTML
-    const fullHtml = `
-<!DOCTYPE html>
+      // Add title if provided
+      const titleHtml = doc.title
+        ? `<h1 class="section-title">${escapeHtml(doc.title)}</h1>`
+        : '';
+
+      sections.push(`
+  <div class="document-section">
+    ${titleHtml}
+    ${contentHtml}
+  </div>`);
+    }
+
+    // Generate complete HTML with page break styles
+    const fullHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Export</title>
-  <style>${template.css}</style>
+  <style>
+${template.css}
+
+    /* Page break between sections */
+    .document-section {
+      page-break-after: always;
+    }
+    .document-section:last-child {
+      page-break-after: auto;
+    }
+    .section-title {
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  ${contentHtml}
+${sections.join('\n')}
 </body>
 </html>`;
 
-    // 4. 生成PDF
+    // Generate PDF
     const pdfBuffer = await generatePDF(fullHtml, body.options);
 
-    // 5. 上传到Storage
-    const storagePath = await uploadPDF(user.id, body.export_id, pdfBuffer);
-
-    // 6. 更新数据库状态
-    await updateExportStatus(body.export_id, 'completed', storagePath);
-
-    // 7. 返回成功响应
-    return c.json({
-      success: true,
-      data: {
-        export_id: body.export_id,
-        storage_path: storagePath,
-        status: 'completed',
+    // Return PDF directly
+    return new Response(new Uint8Array(pdfBuffer), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="export.pdf"',
+        'Content-Length': pdfBuffer.length.toString(),
       },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-
-    // 尝试更新失败状态
-    try {
-      await updateExportStatus(body.export_id, 'failed', undefined, message);
-    } catch {
-      // 忽略数据库更新错误
-    }
+    console.error('PDF generation error:', error);
 
     return c.json(
       {
@@ -112,3 +151,13 @@ pdfRouter.get('/templates', (c) => {
     templates: getTemplateList(),
   });
 });
+
+// Helper function to escape HTML in titles
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
