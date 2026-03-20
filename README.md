@@ -1,29 +1,29 @@
-# DocSVR
+# remote_docs
 
-Markdown 转 PDF 文档服务，支持 LaTeX 数学公式渲染。
+Gotenberg PDF 生成服务的轻量级封装，支持多文档合并导出。
 
 ## 特性
 
-- Markdown 解析（GitHub Flavored Markdown）
+- 多 Markdown 文档合并为单个 PDF
+- 自动分页处理
 - LaTeX 数学公式支持（KaTeX）
 - 多种 PDF 模板（基础、GitHub 风格、试卷）
-- Supabase 存储集成
-- JWT 认证
+- Supabase JWT 认证
 - Docker 部署支持
 
 ## 架构
 
 ```
-[ Supabase Edge Function ]
-            ↓ (HTTP)
-[ DocSVR (Node.js) ]
-  - Markdown 解析（markdown-it）
-  - 数学公式渲染（KaTeX）
-  - 套用 PDF 模板
-            ↓ (HTTP)
+[ Client ]
+    ↓ POST /api/v1/pdf/export (JWT + documents)
+[ remote_docs ]
+    ├─ JWT 验证
+    ├─ Markdown → HTML
+    └─ 合并文档 + 分页
+    ↓
 [ Gotenberg ]
-            ↓
-          PDF
+    ↓ PDF binary
+[ Client 接收 PDF ]
 ```
 
 ## 快速开始
@@ -38,13 +38,13 @@ npm install
 
 ```bash
 cp .env.example .env
-# 编辑 .env 文件，填入 Supabase 凭证
+# 编辑 .env 文件
 ```
 
 ### 3. 启动 Gotenberg
 
 ```bash
-docker run -p 3001:3000 gotenberg/gotenberg:8
+docker run -d --name gotenberg -p 3001:3000 gotenberg/gotenberg:8
 ```
 
 ### 4. 启动服务
@@ -61,13 +61,21 @@ npm start
 ## Docker 部署
 
 ```bash
+# 使用 docker-compose（推荐）
 docker-compose up -d
+
+# 或单独构建
+docker build -t remote_docs .
+docker run -p 3000:3000 \
+  -e SUPABASE_JWT_SECRET=your-secret \
+  -e GOTENBERG_URL=http://gotenberg:3000 \
+  remote_docs
 ```
 
 ## 文档
 
-- [配置文档](docs/configuration.md) - 环境变量、Supabase 配置、Docker 部署
-- [使用文档](docs/usage.md) - API 接口、Markdown 语法、示例代码
+- [部署文档](docs/deployment.md) - 环境变量、Docker 配置
+- [使用文档](docs/usage.md) - API 接口、示例代码
 
 ## API 端点
 
@@ -81,8 +89,8 @@ docker-compose up -d
 
 - [Hono](https://hono.dev/) - Web 框架
 - [markdown-it](https://github.com/markdown-it/markdown-it) - Markdown 解析
-- [Gotenberg](https://gotenberg.dev/) - PDF 渲染
-- [Supabase](https://supabase.com/) - 认证与存储
+- [Gotenberg](https://gotenberg.dev/) - PDF 渲染引擎
+- [Supabase](https://supabase.com/) - JWT 认证
 
 ## License
 

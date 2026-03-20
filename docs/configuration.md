@@ -1,79 +1,30 @@
-# DocSVR 配置文档
+# remote_docs 配置文档
 
 ## 环境变量
 
-DocSVR 通过环境变量进行配置。以下是所有必需和可选的环境变量：
+remote_docs 通过环境变量进行配置。
 
 ### 必需环境变量
 
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
-| `SUPABASE_URL` | Supabase 项目 URL | `https://xxxxx.supabase.co` |
 | `SUPABASE_JWT_SECRET` | Supabase JWT 密钥（用于验证用户令牌） | `your-jwt-secret` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Service Role 密钥（用于 Storage 和数据库操作） | `your-service-role-key` |
 
 ### 可选环境变量
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `GOTENBERG_URL` | Gotenberg 服务地址 | `http://localhost:3001` |
+| `GOTENBERG_TIMEOUT` | PDF 生成超时时间（毫秒） | `60000` |
 | `PORT` | 服务监听端口 | `3000` |
 | `NODE_ENV` | 运行环境 | `development` |
 
-## Supabase 配置
+## 获取 Supabase JWT Secret
 
-### 1. 创建 Storage Bucket
-
-在 Supabase 控制台创建名为 `pdf-exports` 的 Storage Bucket：
-
-```sql
--- 在 Supabase SQL Editor 中执行
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('pdf-exports', 'pdf-exports', false);
-```
-
-### 2. 设置 Storage 策略
-
-```sql
--- 允许用户上传自己的 PDF
-CREATE POLICY "Users can upload own PDFs"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'pdf-exports' AND auth.uid()::text = (storage.foldername(name))[1]);
-
--- 允许用户读取自己的 PDF
-CREATE POLICY "Users can read own PDFs"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'pdf-exports' AND auth.uid()::text = (storage.foldername(name))[1]);
-```
-
-### 3. 创建数据库表
-
-```sql
-CREATE TABLE pdf_export (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id),
-  status TEXT NOT NULL DEFAULT 'pending',
-  storage_path TEXT,
-  error_message TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  completed_at TIMESTAMPTZ
-);
-
--- 索引
-CREATE INDEX idx_pdf_export_user_id ON pdf_export(user_id);
-CREATE INDEX idx_pdf_export_status ON pdf_export(status);
-```
-
-### 4. 获取凭证
-
-在 Supabase 控制台的 **Settings > API** 页面获取：
-
-- **Project URL** → `SUPABASE_URL`
-- **anon public key** → 用于客户端
-- **service_role key** → `SUPABASE_SERVICE_ROLE_KEY`
-
-在 **Settings > API > JWT Secret** 获取 `SUPABASE_JWT_SECRET`。
+1. 登录 [Supabase Dashboard](https://app.supabase.com/)
+2. 选择你的项目
+3. 进入 **Settings > API**
+4. 在 **JWT Secret** 部分找到密钥
 
 ## 本地开发配置
 
@@ -81,26 +32,25 @@ CREATE INDEX idx_pdf_export_status ON pdf_export(status);
 
 ```bash
 # .env
-SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_JWT_SECRET=your-jwt-secret
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 GOTENBERG_URL=http://localhost:3001
+GOTENBERG_TIMEOUT=60000
 PORT=3000
 ```
 
 ### 2. 启动 Gotenberg
 
 ```bash
-docker run -p 3001:3000 gotenberg/gotenberg:8
+docker run -d --name gotenberg -p 3001:3000 gotenberg/gotenberg:8
 ```
 
-### 3. 启动 DocSVR
+### 3. 启动 remote_docs
 
 ```bash
 # 安装依赖
 npm install
 
-# 开发模式
+# 开发模式（热重载）
 npm run dev
 
 # 或构建后运行
@@ -108,32 +58,74 @@ npm run build
 npm start
 ```
 
-## Docker 部署配置
+### 4. 验证服务
+
+```bash
+# 健康检查
+curl http://localhost:3000/api/v1/health
+```
+
+期望响应：
+```json
+{
+  "status": "healthy",
+  "services": {
+    "gotenberg": "ok"
+  }
+}
+```
+
+## Docker 部署
 
 ### 使用 docker-compose（推荐）
 
-```bash
-# 创建 .env 文件后
-docker-compose up -d
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  remote_docs:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - GOTENBERG_URL=http://gotenberg:3000
+      - PORT=3000
+      - GOTENBERG_TIMEOUT=60000
+    depends_on:
+      - gotenberg
+    restart: unless-stopped
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
 ```
 
-服务将启动：
-- DocSVR: `http://localhost:3000`
-- Gotenberg: `http://localhost:3001`
+启动服务：
+
+```bash
+# 创建 .env 文件
+echo "SUPABASE_JWT_SECRET=your-secret" > .env
+
+# 启动
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f remote_docs
+```
 
 ### 单独构建镜像
 
 ```bash
 # 构建镜像
-docker build -t docsvr .
+docker build -t remote_docs .
 
-# 运行容器
+# 运行容器（需要单独运行 Gotenberg）
 docker run -p 3000:3000 \
-  -e SUPABASE_URL=https://your-project.supabase.co \
   -e SUPABASE_JWT_SECRET=your-jwt-secret \
-  -e SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
-  -e GOTENBERG_URL=http://gotenberg:3000 \
-  docsvr
+  -e GOTENBERG_URL=http://gotenberg-host:3000 \
+  remote_docs
 ```
 
 ## 生产环境建议
@@ -149,31 +141,140 @@ services:
     image: gotenberg/gotenberg:8
     deploy:
       replicas: 3
+    environment:
+      - CHROMIUM_START_INDEX=0
 ```
 
-### 2. 任务队列
+配合负载均衡器分发请求。
 
-高并发场景建议引入任务队列（如 BullMQ）异步处理 PDF 生成。
+### 2. 启用 Gotenberg Basic Auth
+
+Gotenberg 支持内置的 Basic Auth：
+
+```yaml
+services:
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    environment:
+      - GOTENBERG_API_BASIC_AUTH_USERNAME=admin
+      - GOTENBERG_API_BASIC_AUTH_PASSWORD=secure-password
+```
+
+然后在 remote_docs 中配置：
+
+```bash
+# 注意：需要修改代码支持 Basic Auth
+GOTENBERG_URL=http://admin:secure-password@gotenberg:3000
+```
 
 ### 3. 负载均衡
 
-在 DocSVR 前配置负载均衡器（如 Nginx、Traefik）。
+在 remote_docs 前配置负载均衡器（如 Nginx、Traefik）：
+
+```nginx
+# nginx.conf
+upstream remote_docs {
+    server remote_docs_1:3000;
+    server remote_docs_2:3000;
+    server remote_docs_3:3000;
+}
+
+server {
+    listen 80;
+
+    location / {
+        proxy_pass http://remote_docs;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+
+        # 增加超时时间（PDF 生成可能较慢）
+        proxy_read_timeout 120s;
+    }
+}
+```
 
 ### 4. 监控
 
 配置健康检查端点监控：
 
 ```bash
-curl http://localhost:3000/api/v1/health
+# Kubernetes liveness probe 示例
+livenessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 30
 ```
 
-响应示例：
-```json
-{
-  "status": "healthy",
-  "services": {
-    "gotenberg": "ok",
-    "supabase": "ok"
-  }
-}
+### 5. 资源限制
+
+```yaml
+services:
+  remote_docs:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  gotenberg:
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
 ```
+
+### 6. 日志配置
+
+```bash
+# 设置日志级别
+NODE_ENV=production
+
+# 配置日志输出（如果需要）
+# LOG_LEVEL=info
+```
+
+## 部署检查清单
+
+- [ ] 设置 `SUPABASE_JWT_SECRET` 环境变量
+- [ ] Gotenberg 服务可达
+- [ ] 健康检查返回正常
+- [ ] 配置了适当的超时时间
+- [ ] 设置了资源限制
+- [ ] 配置了监控和告警
+- [ ] 测试了 JWT 认证流程
+- [ ] 测试了 PDF 生成功能
+
+## 故障排查
+
+### 服务无法启动
+
+1. 检查 `SUPABASE_JWT_SECRET` 是否设置
+2. 检查端口 3000 是否被占用
+3. 查看日志：`docker-compose logs remote_docs`
+
+### Gotenberg 连接失败
+
+1. 检查 Gotenberg 容器是否运行：`docker ps`
+2. 检查网络连通性：`curl http://gotenberg:3000/health`
+3. 检查 `GOTENBERG_URL` 配置
+
+### PDF 生成超时
+
+1. 增加 `GOTENBERG_TIMEOUT` 值
+2. 检查文档大小，可能需要拆分
+3. 增加 Gotenberg 实例数量
+
+### JWT 验证失败
+
+1. 确认使用的是 Supabase 的 JWT Secret（不是 anon key）
+2. 检查令牌是否过期
+3. 确认 Authorization 头格式正确：`Bearer <token>`
