@@ -10,8 +10,8 @@ export const templates: Record<string, PDFTemplate> = {
   exam: examTemplate,
 };
 
-export function getTemplate(id: string): PDFTemplate {
-  return templates[id] || baseTemplate;
+export function getTemplate(id: string): PDFTemplate | null {
+  return templates[id] || null;
 }
 
 export function getTemplateList(): Array<{ id: string; name: string; description: string }> {
