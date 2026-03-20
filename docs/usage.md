@@ -28,6 +28,20 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于：
 
 ---
 
+### Web 管理界面
+
+**GET** `/ui`
+
+提供可视化的 PDF 生成界面，无需认证即可访问页面（但生成 PDF 仍需 JWT Token）。
+
+**功能：**
+- 输入 JWT Token 进行认证
+- 添加多个 Markdown 文档
+- 选择模板和页面设置
+- 实时生成并下载 PDF
+
+---
+
 ### 获取模板列表
 
 **GET** `/api/v1/pdf/templates`
@@ -237,6 +251,16 @@ export default async function handler(req: Request) {
 ### cURL 示例
 
 ```bash
+# 健康检查
+curl http://localhost:3000/api/v1/health
+
+# 访问 Web 管理界面
+open http://localhost:3000/ui
+
+# 获取模板列表
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  http://localhost:3000/api/v1/pdf/templates
+
 # 导出 PDF
 curl -X POST http://localhost:3000/api/v1/pdf/export \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -249,13 +273,6 @@ curl -X POST http://localhost:3000/api/v1/pdf/export \
     "template": "github"
   }' \
   -o output.pdf
-
-# 健康检查
-curl http://localhost:3000/api/v1/health
-
-# 获取模板列表
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  http://localhost:3000/api/v1/pdf/templates
 ```
 
 ---

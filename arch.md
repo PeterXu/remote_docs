@@ -7,9 +7,7 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Mark
 ## 架构图
 
 ```
-[ Supabase Edge Function ]
-        ↓ (提供 remote_docs URL 给客户端)
-[ Client ]
+[ Client / Web UI ]
         ↓ POST /api/v1/pdf/export
         Authorization: Bearer <supabase_jwt>
         { documents: [...], template: "github" }
@@ -72,7 +70,8 @@ remote_doc/
 │   ├── index.ts              # 入口，Hono 应用
 │   ├── routes/
 │   │   ├── pdf.ts            # PDF 导出 API
-│   │   └── health.ts         # 健康检查
+│   │   ├── health.ts         # 健康检查
+│   │   └── ui.ts             # Web 管理界面
 │   ├── services/
 │   │   ├── gotenberg.ts      # Gotenberg 客户端
 │   │   └── markdown.ts       # Markdown 解析

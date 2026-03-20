@@ -4,12 +4,13 @@ services:
   remote_docs:
     build: .
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       - GOTENBERG_URL=http://gotenberg:3000
-      - PORT=3000
-      - GOTENBERG_TIMEOUT=60000
+      - GOTENBERG_TIMEOUT=${GOTENBERG_TIMEOUT:-60000}
     depends_on:
       - gotenberg
     restart: unless-stopped
@@ -17,6 +18,3 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:8
     restart: unless-stopped
-    # Optional: Uncomment to expose Gotenberg directly
-    # ports:
-    #   - "3001:3000"

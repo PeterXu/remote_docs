@@ -14,10 +14,12 @@ remote_docs 通过环境变量进行配置。
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `GOTENBERG_URL` | Gotenberg 服务地址 | `http://localhost:3001` |
-| `GOTENBERG_TIMEOUT` | PDF 生成超时时间（毫秒） | `60000` |
 | `PORT` | 服务监听端口 | `3000` |
 | `NODE_ENV` | 运行环境 | `development` |
+| `GOTENBERG_TIMEOUT` | PDF 生成超时时间（毫秒） | `60000` |
+| `GOTENBERG_URL` | Gotenberg 服务地址（仅本地开发） | `http://localhost:3001` |
+
+> **注意**：`GOTENBERG_URL` 在 Docker Compose 环境中由 `docker-compose.yml` 固定为 `http://gotenberg:3000`，无需配置。
 
 ## 获取 Supabase JWT Secret
 
@@ -31,11 +33,19 @@ remote_docs 通过环境变量进行配置。
 ### 1. 创建环境变量文件
 
 ```bash
-# .env
+cp .env.example .env
+# 编辑 .env，填入真实的 SUPABASE_JWT_SECRET
+```
+
+`.env` 文件内容：
+```bash
+# 必需
 SUPABASE_JWT_SECRET=your-jwt-secret
-GOTENBERG_URL=http://localhost:3001
-GOTENBERG_TIMEOUT=60000
+
+# 可选（已有默认值）
 PORT=3000
+NODE_ENV=development
+GOTENBERG_TIMEOUT=60000
 ```
 
 ### 2. 启动 Gotenberg
@@ -87,12 +97,13 @@ services:
   remote_docs:
     build: .
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       - GOTENBERG_URL=http://gotenberg:3000
-      - PORT=3000
-      - GOTENBERG_TIMEOUT=60000
+      - GOTENBERG_TIMEOUT=${GOTENBERG_TIMEOUT:-60000}
     depends_on:
       - gotenberg
     restart: unless-stopped
@@ -102,11 +113,17 @@ services:
     restart: unless-stopped
 ```
 
+**配置说明：**
+- `${VAR:-default}` 表示优先使用 `.env` 中的值，不存在则使用默认值
+- `GOTENBERG_URL` 固定为 `http://gotenberg:3000`（Docker 内部网络）
+- 只有 `SUPABASE_JWT_SECRET` 是必需的，其他都有默认值
+
 启动服务：
 
 ```bash
 # 创建 .env 文件
-echo "SUPABASE_JWT_SECRET=your-secret" > .env
+cp .env.example .env
+# 编辑 .env，填入真实的 SUPABASE_JWT_SECRET
 
 # 启动
 docker-compose up -d
@@ -125,6 +142,7 @@ docker build -t remote_docs .
 docker run -p 3000:3000 \
   -e SUPABASE_JWT_SECRET=your-jwt-secret \
   -e GOTENBERG_URL=http://gotenberg-host:3000 \
+  -e GOTENBERG_TIMEOUT=60000 \
   remote_docs
 ```
 

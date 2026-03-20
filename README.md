@@ -61,27 +61,26 @@ npm start
 ## Docker 部署
 
 ```bash
-# 使用 docker-compose（推荐）
-docker-compose up -d
+# 复制并配置环境变量
+cp .env.example .env
+# 编辑 .env，填入 SUPABASE_JWT_SECRET
 
-# 或单独构建
-docker build -t remote_docs .
-docker run -p 3000:3000 \
-  -e SUPABASE_JWT_SECRET=your-secret \
-  -e GOTENBERG_URL=http://gotenberg:3000 \
-  remote_docs
+# 启动服务
+docker-compose up -d
 ```
 
 ## 文档
 
-- [部署文档](docs/deployment.md) - 环境变量、Docker 配置
+- [配置文档](docs/configuration.md) - 环境变量、Docker 配置
 - [使用文档](docs/usage.md) - API 接口、示例代码
+- [架构文档](arch.md) - 系统架构、设计原则
 
 ## API 端点
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|------|
 | GET | `/api/v1/health` | 健康检查 | 否 |
+| GET | `/ui` | Web 管理界面 | 否 |
 | GET | `/api/v1/pdf/templates` | 获取模板列表 | 是 |
 | POST | `/api/v1/pdf/export` | 导出 PDF | 是 |
 
