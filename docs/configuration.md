@@ -94,7 +94,8 @@ curl http://localhost:3000/api/v1/health
 version: '3.8'
 
 services:
-  remote_docs:
+  remote-docs-api:
+    image: remote-docs-api
     build: .
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
@@ -129,21 +130,21 @@ cp .env.example .env
 docker-compose up -d
 
 # 查看日志
-docker-compose logs -f remote_docs
+docker-compose logs -f remote-docs-api
 ```
 
 ### 单独构建镜像
 
 ```bash
 # 构建镜像
-docker build -t remote_docs .
+docker build -t remote-docs-api .
 
 # 运行容器（需要单独运行 Gotenberg）
 docker run -p 3000:3000 \
   -e SUPABASE_JWT_SECRET=your-jwt-secret \
   -e GOTENBERG_URL=http://gotenberg-host:3000 \
   -e GOTENBERG_TIMEOUT=60000 \
-  remote_docs
+  remote-docs-api
 ```
 
 ## 生产环境建议
@@ -191,17 +192,17 @@ GOTENBERG_URL=http://admin:secure-password@gotenberg:3000
 
 ```nginx
 # nginx.conf
-upstream remote_docs {
-    server remote_docs_1:3000;
-    server remote_docs_2:3000;
-    server remote_docs_3:3000;
+upstream remote_docs_api {
+    server remote-docs-api-1:3000;
+    server remote-docs-api-2:3000;
+    server remote-docs-api-3:3000;
 }
 
 server {
     listen 80;
 
     location / {
-        proxy_pass http://remote_docs;
+        proxy_pass http://remote_docs_api;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
 
@@ -229,7 +230,7 @@ livenessProbe:
 
 ```yaml
 services:
-  remote_docs:
+  remote-docs-api:
     deploy:
       resources:
         limits:
@@ -277,7 +278,7 @@ NODE_ENV=production
 
 1. 检查 `SUPABASE_JWT_SECRET` 是否设置
 2. 检查端口 3000 是否被占用
-3. 查看日志：`docker-compose logs remote_docs`
+3. 查看日志：`docker-compose logs remote-docs-api`
 
 ### Gotenberg 连接失败
 

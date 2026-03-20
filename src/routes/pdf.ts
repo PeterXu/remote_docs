@@ -9,6 +9,17 @@ import type { MultiPDFExportRequest, User } from '../types';
 
 export const pdfRouter = new Hono();
 
+// Sanitize CSS variable name (allow only alphanumeric, hyphen, underscore)
+const sanitizeKey = (key: string): string => {
+  return key.replace(/[^a-zA-Z0-9-_]/g, '');
+};
+
+// Sanitize CSS variable value (escape special chars)
+const sanitizeValue = (value: string): string => {
+  // Remove quotes and escape special characters
+  return value.replace(/['"]/g, '').replace(/;/g, '\\3b ');
+};
+
 // 加载 KaTeX CSS（启动时缓存）
 let katexCss: string;
 try {

@@ -1,7 +1,6 @@
-version: '3.8'
-
 services:
-  remote_docs:
+  remote-docs-api:
+    image: remote-docs-api
     build: .
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
