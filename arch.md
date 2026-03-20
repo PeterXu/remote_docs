@@ -1,115 +1,137 @@
-🏆 最优解（综合评分最高）
+# remote_docs 架构设计
 
-👉 Gotenberg + 自建 Doc Service（Node）+ Markdown → HTML（markdown-it + KaTeX）
+## 概述
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Markdown 文档合并为单个 PDF。
 
-🎯 适用场景
-- 教育试卷导出（选择题 / 填空题 / 解答题）
-- Markdown 内容转 PDF（含 LaTeX 数学公式）
-- Supabase Edge Functions 集成
-- 可 Docker 化部署的自建文档服务
+## 架构图
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🧱 架构设计
-
+```
 [ Supabase Edge Function ]
-            ↓ (HTTP)
-[ Doc Service（Node） ]
-  - Markdown 解析（markdown-it）
-  - 数学公式渲染（KaTeX）
-  - 套用试卷 HTML 模板
-            ↓ (HTTP)
+        ↓ (提供 remote_docs URL 给客户端)
+[ Client ]
+        ↓ POST /api/v1/pdf/export
+        Authorization: Bearer <supabase_jwt>
+        { documents: [...], template: "github" }
+[ remote_docs (Hono/Node.js) ]
+        ├─ JWT 验证
+        ├─ 解析每个 markdown 为 HTML
+        ├─ 合并 HTML + 添加分页
+        └─ 转发 multipart 请求
+        ↓
 [ Gotenberg ]
-            ↓
-          PDF
+        ↓ PDF 二进制
+[ Client 接收 PDF 流 ]
+```
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 核心技术栈
 
-⚙️ 核心技术栈
+| 组件 | 技术 | 说明 |
+|------|------|------|
+| 运行时 | Node.js 20 | 服务端运行环境 |
+| Web框架 | Hono | 轻量、高性能 |
+| PDF渲染 | Gotenberg 8 | 基于 Chromium |
+| Markdown | markdown-it | 解析 Markdown |
+| 数学公式 | KaTeX | LaTeX 公式支持 |
+| 认证 | Supabase JWT | 用户身份验证 |
 
-- Markdown 解析：markdown-it
-- 数学公式：KaTeX（无需转图片）
-- PDF 渲染：Gotenberg（基于 Chromium）
-- 服务层：Node.js（Express / Hono）
-- 部署：Docker
+## 设计原则
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. **轻量封装** - 仅做 Markdown 转换和认证，核心 PDF 生成交给 Gotenberg
+2. **无状态** - 不依赖数据库，不存储文件，易于水平扩展
+3. **直接响应** - PDF 直接返回给客户端，无中间存储
 
-✨ 核心优势
+## 请求流程
 
-✔ 完全兼容 Edge Functions（HTTP 调用，无需本地 Chromium）
-✔ HTML + CSS 强排版能力（远强于 Pandoc / PDF库）
-✔ 支持复杂试卷结构（分页 / 题号 / 页眉页脚 / 答题区）
-✔ 数学公式高质量渲染（矢量，无失真）
-✔ 易扩展（图片 / 表格 / 富文本 / 多模板）
+```
+1. 客户端发送 POST /api/v1/pdf/export
+   - JWT Token (Supabase)
+   - documents 数组 (多个 markdown)
+   - template 选项
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. remote_docs 处理
+   - 验证 JWT
+   - 验证请求参数
+   - 解析每个 markdown → HTML
+   - 合并 HTML，添加分页样式
 
-🧾 渲染流程
+3. 调用 Gotenberg
+   - 发送 multipart/form-data
+   - 包含完整 HTML
 
-Markdown
-  ↓
-markdown-it + KaTeX
-  ↓
-HTML（试卷模板 + CSS）
-  ↓
-Gotenberg
-  ↓
-PDF
+4. 返回 PDF
+   - Gotenberg 返回 PDF 二进制
+   - remote_docs 直接流式返回给客户端
+```
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 项目结构
 
-🎨 排版能力（关键）
+```
+remote_doc/
+├── src/
+│   ├── index.ts              # 入口，Hono 应用
+│   ├── routes/
+│   │   ├── pdf.ts            # PDF 导出 API
+│   │   └── health.ts         # 健康检查
+│   ├── services/
+│   │   ├── gotenberg.ts      # Gotenberg 客户端
+│   │   └── markdown.ts       # Markdown 解析
+│   ├── templates/
+│   │   ├── base.ts           # 基础样式
+│   │   ├── github.ts         # GitHub 风格
+│   │   ├── exam.ts           # 试卷模板
+│   │   └── index.ts          # 模板注册
+│   ├── middleware/
+│   │   └── auth.ts           # JWT 验证
+│   └── types/
+│       └── index.ts          # 类型定义
+├── docs/
+│   ├── usage.md              # 使用文档
+│   └── configuration.md      # 配置文档
+├── Dockerfile
+├── docker-compose.yml
+└── package.json
+```
 
-通过 CSS 可实现：
+## 分页策略
 
-- 自动分页（@page）
-- 题目不拆分（page-break-inside: avoid）
-- 页眉页脚（考试信息 / 页码）
-- 题号 & 选项布局（A/B/C/D 横排）
-- 答题留白区域
-- 密封线（考试场景）
+每个文档自动开始新的一页，使用 CSS 实现：
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🐳 Docker 部署（示例）
-
-Gotenberg：
-docker run -p 3000:3000 gotenberg/gotenberg:8
-
-Doc Service：
-- Node 服务容器化
-- 与 Gotenberg 同网络
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🚀 接口调用示例
-
-Edge Function → Doc Service：
-
-POST /render-pdf
-{
-  "markdown": "...试卷内容..."
+```css
+.document-section {
+  page-break-after: always;
 }
+.document-section:last-child {
+  page-break-after: auto;
+}
+```
 
-Doc Service → Gotenberg：
-- 发送 HTML 文件
-- 返回 PDF 二进制流
+## 安全措施
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. **JWT 验证** - 所有 PDF 接口需要有效的 Supabase JWT
+2. **禁用原始 HTML** - markdown-it 配置 `html: false`
+3. **输入验证** - 限制文档数量 (50) 和大小 (10MB)
+4. **请求大小限制** - 请求体不超过 15MB
+5. **错误信息脱敏** - 不暴露内部错误细节
 
-⚠️ 注意事项
+## 扩展建议
 
-- Gotenberg 单实例并发约 5~10，建议多实例扩展
-- 建议引入任务队列（如 BullMQ）
-- Markdown 建议结构化（便于题库扩展）
-- 模板与内容分离（方便多试卷类型）
+### 高并发场景
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```yaml
+# docker-compose.prod.yml
+services:
+  gotenberg:
+    deploy:
+      replicas: 3
+```
 
-🧠 一句话总结
+### 添加更多模板
 
-👉 用 HTML/CSS 做排版，用 Gotenberg 做渲染，用 Node 做中间层，
-是当前“试卷生成系统”最稳、最灵活、最可扩展的方案。
+在 `src/templates/` 添加新模板文件，然后在 `index.ts` 注册。
+
+### 添加新功能
+
+remote_docs 设计为轻量封装，复杂功能建议：
+- 直接使用 Gotenberg API
+- 或在 Supabase Edge Function 中处理

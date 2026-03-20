@@ -156,7 +156,7 @@ describe('PDF Export Service', () => {
       });
 
       // Import after mocking
-      const { generatePDF } = await import('../services/gotenberg');
+      const { generatePDF } = await import('../services/gotenberg.js');
 
       const html = '<html><body>Test</body></html>';
       const result = await generatePDF(html);
@@ -175,7 +175,7 @@ describe('PDF Export Service', () => {
         text: () => Promise.resolve('Internal error')
       });
 
-      const { generatePDF } = await import('../services/gotenberg');
+      const { generatePDF } = await import('../services/gotenberg.js');
 
       await expect(generatePDF('<html></html>')).rejects.toThrow();
     });
@@ -193,7 +193,7 @@ describe('PDF Export Service', () => {
         arrayBuffer: () => Promise.resolve(invalidArrayBuffer)
       });
 
-      const { generatePDF } = await import('../services/gotenberg');
+      const { generatePDF } = await import('../services/gotenberg.js');
 
       await expect(generatePDF('<html></html>')).rejects.toThrow();
     });
