@@ -45,6 +45,29 @@ pdfRouter.post('/export', async (c) => {
     );
   }
 
+  // Validate document count limit
+  if (body.documents.length > 50) {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'TOO_MANY_DOCUMENTS', message: 'Maximum 50 documents allowed' },
+      },
+      400
+    );
+  }
+
+  // Validate total markdown size (10MB limit)
+  const totalSize = body.documents.reduce((sum, doc) => sum + (doc.markdown?.length || 0), 0);
+  if (totalSize > 10 * 1024 * 1024) {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'PAYLOAD_TOO_LARGE', message: 'Total markdown size exceeds 10MB limit' },
+      },
+      413
+    );
+  }
+
   // Validate each document
   for (let i = 0; i < body.documents.length; i++) {
     if (!body.documents[i].markdown) {
@@ -132,13 +155,21 @@ ${sections.join('\n')}
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('PDF generation error:', error);
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    console.error('PDF generation error:', err);
+
+    // Sanitize error message for client
+    let clientMessage = 'PDF generation failed';
+    if (err.message.includes('timed out') || err.name === 'AbortError') {
+      clientMessage = 'PDF generation timed out. Try reducing document size.';
+    } else if (err.message.includes('Gotenberg')) {
+      clientMessage = 'PDF service error. Please try again later.';
+    }
 
     return c.json(
       {
         success: false,
-        error: { code: 'PDF_GENERATION_FAILED', message },
+        error: { code: 'PDF_GENERATION_FAILED', message: clientMessage },
       },
       500
     );

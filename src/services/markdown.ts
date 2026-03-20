@@ -2,7 +2,7 @@
 import MarkdownIt from 'markdown-it';
 
 const md = new MarkdownIt({
-  html: true,
+  html: false, // Disable raw HTML for security
   linkify: true,
   typographer: true,
 });

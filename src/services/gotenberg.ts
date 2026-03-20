@@ -10,8 +10,22 @@ function mmToInch(mm: number): number {
 
 function parseMargin(marginStr: string | undefined, defaultMm: number): number {
   if (!marginStr) return mmToInch(defaultMm);
-  const num = parseInt(marginStr.replace(/mm/, '').replace('in', '').trim(), 10);
-  return mmToInch(num);
+
+  // Extract numeric value with optional unit
+  const match = marginStr.match(/^(\d+(?:\.\d+)?)\s*(mm|in)?$/);
+  if (!match) {
+    console.warn(`Invalid margin format: ${marginStr}, using default ${defaultMm}mm`);
+    return mmToInch(defaultMm);
+  }
+
+  const value = parseFloat(match[1]);
+  if (isNaN(value)) {
+    return mmToInch(defaultMm);
+  }
+
+  // If unit is 'in', value is already in inches
+  const unit = match[2] || 'mm';
+  return unit === 'in' ? value : mmToInch(value);
 }
 
 export async function generatePDF(html: string, options?: PDFOptions): Promise<Buffer> {
@@ -42,18 +56,51 @@ export async function generatePDF(html: string, options?: PDFOptions): Promise<B
   formData.append('printBackground', 'true');
   formData.append('preferCssPageSize', 'true');
 
-  const response = await fetch(`${GOTENBERG_URL}/forms/chromium/convert/html`, {
-    method: 'POST',
-    body: formData,
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${GOTENBERG_URL}/forms/chromium/convert/html`, {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+    });
+  } catch (error) {
+    // Handle timeout specifically
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('abort'))) {
+      throw new Error('PDF generation timed out');
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Gotenberg error: ${response.status}: ${text}`);
+    // Log full error for debugging, but don't expose to client
+    console.error('Gotenberg error:', response.status, text);
+    throw new Error('Gotenberg service error');
+  }
+
+  // Validate response is actually a PDF
+  const contentType = response.headers.get('content-type');
+  if (contentType && !contentType.includes('application/pdf')) {
+    console.error('Gotenberg returned non-PDF content-type:', contentType);
+    throw new Error('Gotenberg returned invalid response');
   }
 
   const arrayBuffer = await response.arrayBuffer();
+
+  // Validate minimum PDF size
+  if (arrayBuffer.byteLength < 100) {
+    console.error('PDF buffer too small:', arrayBuffer.byteLength);
+    throw new Error('Generated PDF is invalid');
+  }
+
+  // Validate PDF header
+  const header = new Uint8Array(arrayBuffer, 0, 4);
+  const pdfHeader = String.fromCharCode(...header);
+  if (pdfHeader !== '%PDF') {
+    console.error('Invalid PDF header:', pdfHeader);
+    throw new Error('Response is not a valid PDF');
+  }
+
   return Buffer.from(arrayBuffer);
 }
 
