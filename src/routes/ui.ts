@@ -20,7 +20,7 @@ export function serveUI(c: Context) {
       min-height: 100vh;
       padding: 20px;
     }
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 1000px; margin: 0 auto; }
     header { text-align: center; color: white; margin-bottom: 30px; }
     header h1 { font-size: 2rem; margin-bottom: 8px; }
     header p { opacity: 0.9; }
@@ -47,27 +47,34 @@ export function serveUI(c: Context) {
       background: linear-gradient(135deg, #667eea, #764ba2);
       border-radius: 2px;
     }
-    label { display: block; font-size: 0.9rem; font-weight: 500; color: #555; margin-bottom: 6px; }
+    label { display: block; font-size: 0.85rem; font-weight: 500; color: #555; margin-bottom: 6px; }
     input, select, textarea {
       width: 100%;
-      padding: 12px;
+      padding: 10px 12px;
       border: 2px solid #e0e0e0;
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       transition: border-color 0.2s;
     }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #667eea; }
     textarea { font-family: 'SF Mono', Monaco, monospace; font-size: 0.85rem; line-height: 1.5; resize: vertical; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-    .form-group { margin-bottom: 16px; }
-    .document-item {
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-group { margin-bottom: 12px; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .checkbox-group input[type="checkbox"] { width: auto; margin: 0; }
+    .checkbox-group label { margin: 0; }
+    .doc-item {
       background: #f8f9fa;
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 12px;
       position: relative;
+      border-left: 4px solid #667eea;
     }
-    .document-item .remove-btn {
+    .doc-item.chapter-item { border-left-color: #ff6b6b; }
+    .doc-item .remove-btn {
       position: absolute;
       top: 12px;
       right: 12px;
@@ -83,12 +90,24 @@ export function serveUI(c: Context) {
       opacity: 0.8;
       transition: opacity 0.2s;
     }
-    .document-item .remove-btn:hover { opacity: 1; }
+    .doc-item .remove-btn:hover { opacity: 1; }
+    .doc-item .type-badge {
+      position: absolute;
+      top: 12px;
+      right: 50px;
+      background: #667eea;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    .doc-item.chapter-item .type-badge { background: #ff6b6b; }
     .btn {
-      padding: 12px 24px;
+      padding: 10px 20px;
       border: none;
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
@@ -98,7 +117,8 @@ export function serveUI(c: Context) {
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
     .btn-secondary { background: #f0f0f0; color: #333; }
     .btn-secondary:hover { background: #e0e0e0; }
-    .btn-group { display: flex; gap: 12px; margin-top: 20px; }
+    .btn-small { padding: 6px 12px; font-size: 0.8rem; }
+    .btn-group { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
     .status { padding: 12px 16px; border-radius: 8px; margin-top: 16px; display: none; }
     .status.show { display: block; }
     .status.loading { background: #e3f2fd; color: #1565c0; }
@@ -124,9 +144,11 @@ export function serveUI(c: Context) {
       animation: pulse 2s infinite;
     }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .help-text { font-size: 0.8rem; color: #888; margin-top: 4px; }
+    .help-text { font-size: 0.75rem; color: #888; margin-top: 4px; }
+    .section-header { font-size: 0.8rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; }
     footer { text-align: center; color: rgba(255,255,255,0.7); margin-top: 30px; font-size: 0.85rem; }
     footer a { color: white; }
+    .divider { border-top: 1px solid #e0e0e0; margin: 20px 0; }
   </style>
 </head>
 <body>
@@ -147,13 +169,47 @@ export function serveUI(c: Context) {
     </div>
 
     <div class="card">
-      <div class="card-title">Documents</div>
-      <div id="documents"></div>
-      <button class="btn btn-secondary" onclick="addDocument()">+ Add Document</button>
+      <div class="card-title">Document Configuration</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="caption">Main Title (Caption)</label>
+          <input type="text" id="caption" placeholder="Document main title">
+        </div>
+        <div class="form-group">
+          <label for="subtitle">Subtitle</label>
+          <input type="text" id="subtitle" placeholder="Optional subtitle">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="author">Author</label>
+          <input type="text" id="author" placeholder="Author name">
+        </div>
+        <div class="form-group">
+          <label for="date">Date</label>
+          <input type="text" id="date" placeholder="YYYY-MM-DD (optional)">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="copyright">Copyright (Footer)</label>
+        <input type="text" id="copyright" placeholder="© 2024 Company Name">
+      </div>
     </div>
 
     <div class="card">
-      <div class="card-title">Options</div>
+      <div class="card-title">
+        Documents
+        <span style="margin-left: auto; font-size: 0.85rem; font-weight: normal; color: #888;">Chapters and Content</span>
+      </div>
+      <div class="btn-group" style="margin-top: 0; margin-bottom: 16px;">
+        <button class="btn btn-secondary btn-small" onclick="addChapter()">+ Add Chapter</button>
+        <button class="btn btn-secondary btn-small" onclick="addContent()">+ Add Content</button>
+      </div>
+      <div id="documents"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Page Options</div>
       <div class="form-row">
         <div class="form-group">
           <label for="template">Template</label>
@@ -169,7 +225,7 @@ export function serveUI(c: Context) {
           </select>
         </div>
       </div>
-      <div class="form-row">
+      <div class="form-row-4">
         <div class="form-group">
           <label for="marginTop">Top Margin</label>
           <input type="text" id="marginTop" value="20mm" placeholder="20mm">
@@ -187,12 +243,65 @@ export function serveUI(c: Context) {
           <input type="text" id="marginRight" value="15mm" placeholder="15mm">
         </div>
       </div>
+    </div>
 
+    <div class="card">
+      <div class="card-title">Footer & Watermark</div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="showPageNumber" checked>
+        <label for="showPageNumber">Show page numbers</label>
+      </div>
+      <div class="form-group">
+        <label for="pageNumberFormat">Page number format (supports {page}, {total})</label>
+        <input type="text" id="pageNumberFormat" value="{page}" placeholder="{page} or Page {page} of {total}">
+      </div>
+      <div class="divider"></div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="enableWatermark">
+        <label for="enableWatermark">Enable watermark</label>
+      </div>
+      <div id="watermarkOptions" style="display: none;">
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="watermarkText">Watermark Text</label>
+            <input type="text" id="watermarkText" placeholder="CONFIDENTIAL">
+          </div>
+          <div class="form-group">
+            <label for="watermarkColor">Color</label>
+            <input type="text" id="watermarkColor" value="#999" placeholder="#999">
+          </div>
+          <div class="form-group">
+            <label for="watermarkOpacity">Opacity (0-1)</label>
+            <input type="number" id="watermarkOpacity" value="0.1" min="0" max="1" step="0.05">
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="watermarkFontSize">Font Size</label>
+            <input type="text" id="watermarkFontSize" value="48px" placeholder="48px">
+          </div>
+          <div class="form-group">
+            <label for="watermarkAngle">Angle (degrees)</label>
+            <input type="number" id="watermarkAngle" value="-30" placeholder="-30">
+          </div>
+          <div class="form-group">
+            <label for="watermarkDensity">Density</label>
+            <select id="watermarkDensity">
+              <option value="sparse">Sparse</option>
+              <option value="normal" selected>Normal</option>
+              <option value="dense">Dense</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="btn-group">
         <button class="btn btn-primary" id="generateBtn" onclick="generatePDF()">Generate PDF</button>
         <button class="btn btn-secondary" onclick="loadSample()">Load Sample</button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
       </div>
-
       <div class="status" id="status"></div>
     </div>
 
@@ -205,27 +314,65 @@ export function serveUI(c: Context) {
   <script>
     let docCount = 0;
 
-    function addDocument(title = '', markdown = '') {
+    function addChapter(title = '') {
       docCount++;
       const container = document.getElementById('documents');
       const div = document.createElement('div');
-      div.className = 'document-item';
+      div.className = 'doc-item chapter-item';
       div.id = 'doc-' + docCount;
+      div.dataset.type = 'chapter';
       div.innerHTML = '<button class="remove-btn" onclick="removeDocument(' + docCount + ')">×</button>' +
-        '<div class="form-group"><label>Title (optional)</label>' +
-        '<input type="text" class="doc-title" placeholder="Document title"></div>' +
-        '<div class="form-group"><label>Markdown Content</label>' +
-        '<textarea class="doc-markdown" rows="8" placeholder="# Your markdown here..."></textarea></div>';
+        '<span class="type-badge">Chapter</span>' +
+        '<div class="form-group" style="margin-right: 80px;">' +
+        '<label>Chapter Title</label>' +
+        '<input type="text" class="doc-chapter" placeholder="Chapter 1: Introduction" value="' + escapeHtml(title) + '"></div>';
       container.appendChild(div);
-      div.querySelector('.doc-title').value = title;
-      div.querySelector('.doc-markdown').value = markdown;
+    }
+
+    function addContent(title = '', items = ['']) {
+      docCount++;
+      const container = document.getElementById('documents');
+      const div = document.createElement('div');
+      div.className = 'doc-item content-item';
+      div.id = 'doc-' + docCount;
+      div.dataset.type = 'content';
+      div.innerHTML = '<button class="remove-btn" onclick="removeDocument(' + docCount + ')">×</button>' +
+        '<span class="type-badge">Content</span>' +
+        '<div class="form-group" style="margin-right: 80px;"><label>Title (optional)</label>' +
+        '<input type="text" class="doc-title" placeholder="Content title" value="' + escapeHtml(title) + '"></div>' +
+        '<div class="form-group"><label>Markdown Content (multiple blocks)</label>' +
+        '<div id="items-' + docCount + '"></div>' +
+        '<button class="btn btn-secondary btn-small" style="margin-top: 8px;" onclick="addContentBlock(' + docCount + ')">+ Add Block</button></div>';
+      container.appendChild(div);
+      // Add initial content blocks
+      const itemsContainer = div.querySelector('#items-' + docCount);
+      items.forEach(item => addContentBlock(docCount, item));
+    }
+
+    function addContentBlock(docId, content = '') {
+      const container = document.getElementById('items-' + docId);
+      const blockId = 'block-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      const div = document.createElement('div');
+      div.className = 'form-group';
+      div.style.marginBottom = '8px';
+      div.innerHTML = '<div style="display: flex; gap: 8px;">' +
+        '<textarea class="doc-content-item" rows="4" placeholder="# Your markdown here..." style="flex: 1;">' + escapeHtml(content) + '</textarea>' +
+        '<button class="btn btn-secondary btn-small" onclick="this.parentElement.parentElement.remove()" style="align-self: flex-start;">×</button>' +
+        '</div>';
+      container.appendChild(div);
     }
 
     function removeDocument(id) {
       const doc = document.getElementById('doc-' + id);
-      if (doc && document.querySelectorAll('.document-item').length > 1) {
+      if (doc) {
         doc.remove();
       }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     async function checkHealth() {
@@ -251,30 +398,80 @@ export function serveUI(c: Context) {
         return;
       }
 
+      // Build documents array
       const documents = [];
-      document.querySelectorAll('.document-item').forEach(item => {
-        const title = item.querySelector('.doc-title').value.trim();
-        const markdown = item.querySelector('.doc-markdown').value.trim();
-        if (markdown) documents.push({ title, markdown });
+      document.querySelectorAll('.doc-item').forEach(item => {
+        const type = item.dataset.type;
+        if (type === 'chapter') {
+          const chapter = item.querySelector('.doc-chapter')?.value.trim();
+          if (chapter) {
+            documents.push({ chapter });
+          }
+        } else if (type === 'content') {
+          const title = item.querySelector('.doc-title')?.value.trim();
+          const contentItems = item.querySelectorAll('.doc-content-item');
+          const items = Array.from(contentItems)
+            .map(el => el.value.trim())
+            .filter(v => v);
+          if (items.length > 0) {
+            documents.push({ title: title || undefined, items });
+          }
+        }
       });
 
       if (documents.length === 0) {
-        showStatus('error', 'Please add at least one document with content');
+        showStatus('error', 'Please add at least one chapter or content section');
         return;
+      }
+
+      // Build config
+      const config = {};
+      const caption = document.getElementById('caption').value.trim();
+      const subtitle = document.getElementById('subtitle').value.trim();
+      const author = document.getElementById('author').value.trim();
+      const date = document.getElementById('date').value.trim();
+      const copyright = document.getElementById('copyright').value.trim();
+      if (caption) config.caption = caption;
+      if (subtitle) config.subtitle = subtitle;
+      if (author) config.author = author;
+      if (date) config.date = date;
+      if (copyright) config.copyright = copyright;
+
+      // Build options
+      const options = {
+        format: document.getElementById('format').value,
+        margin: {
+          top: document.getElementById('marginTop').value,
+          bottom: document.getElementById('marginBottom').value,
+          left: document.getElementById('marginLeft').value,
+          right: document.getElementById('marginRight').value
+        },
+        showPageNumber: document.getElementById('showPageNumber').checked,
+      };
+
+      const pageNumberFormat = document.getElementById('pageNumberFormat').value.trim();
+      if (pageNumberFormat) options.pageNumberFormat = pageNumberFormat;
+
+      // Watermark
+      if (document.getElementById('enableWatermark').checked) {
+        const watermarkText = document.getElementById('watermarkText').value.trim();
+        if (watermarkText) {
+          options.watermark = {
+            text: watermarkText,
+            color: document.getElementById('watermarkColor').value || '#999',
+            opacity: parseFloat(document.getElementById('watermarkOpacity').value) || 0.1,
+            fontSize: document.getElementById('watermarkFontSize').value || '48px',
+            angle: parseInt(document.getElementById('watermarkAngle').value) || -30,
+            density: document.getElementById('watermarkDensity').value || 'normal'
+          };
+        }
       }
 
       const requestBody = {
         documents,
+        config: Object.keys(config).length > 0 ? config : undefined,
         template: document.getElementById('template').value,
-        options: {
-          format: document.getElementById('format').value,
-          margin: {
-            top: document.getElementById('marginTop').value,
-            bottom: document.getElementById('marginBottom').value,
-            left: document.getElementById('marginLeft').value,
-            right: document.getElementById('marginRight').value
-          }
-        }
+        options
       };
 
       btn.disabled = true;
@@ -320,13 +517,39 @@ export function serveUI(c: Context) {
     }
 
     function loadSample() {
-      document.getElementById('documents').innerHTML = '';
-      docCount = 0;
-      addDocument('Chapter 1: Introduction', '# Introduction\\n\\n## What is remote_docs?\\n\\nremote_docs is a **lightweight PDF generation service**.\\n\\n### Features\\n\\n- Multiple document merging\\n- Automatic page breaks\\n- LaTeX math support\\n- Multiple templates');
-      addDocument('Chapter 2: Math', '# Math Formulas\\n\\nInline: $E = mc^2$\\n\\nBlock:\\n\\n$$\\\\int_0^1 x^2 \\\\, dx = \\\\frac{1}{3}$$');
+      clearAll();
+      // Add config
+      document.getElementById('caption').value = 'My Document';
+      document.getElementById('subtitle').value = 'A sample document';
+      document.getElementById('author').value = 'John Doe';
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('copyright').value = '© 2024 My Company';
+      // Add documents
+      addChapter('Chapter 1: Introduction');
+      addContent('', ['# Introduction\\n\\n## What is remote_docs?\\n\\nremote_docs is a **lightweight PDF generation service**.\\n\\n### Features\\n\\n- Multiple document merging\\n- Automatic page breaks\\n- LaTeX math support\\n- Multiple templates'].join('\\n\\n'));
+      addChapter('Chapter 2: Math Formulas');
+      addContent('Math Examples', ['# Math Formulas\\n\\nInline: $E = mc^2$\\n\\nBlock:\\n\\n$$\\\\int_0^1 x^2 \\\\, dx = \\\\frac{1}{3}$$'].join('\\n\\n'));
     }
 
-    addDocument();
+    function clearAll() {
+      document.getElementById('documents').innerHTML = '';
+      document.getElementById('caption').value = '';
+      document.getElementById('subtitle').value = '';
+      document.getElementById('author').value = '';
+      document.getElementById('date').value = '';
+      document.getElementById('copyright').value = '';
+      document.getElementById('enableWatermark').checked = false;
+      document.getElementById('watermarkOptions').style.display = 'none';
+      docCount = 0;
+    }
+
+    // Watermark toggle
+    document.getElementById('enableWatermark').addEventListener('change', function() {
+      document.getElementById('watermarkOptions').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Initialize with one content section
+    addContent();
     checkHealth();
     setInterval(checkHealth, 30000);
   </script>
