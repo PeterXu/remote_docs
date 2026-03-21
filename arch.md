@@ -10,12 +10,21 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Mark
 [ Client / Web UI ]
         ↓ POST /api/v1/pdf/export
         Authorization: Bearer <supabase_jwt>
-        { documents: [...], template: "github" }
+        {
+          config: { caption, copyright, author, ... },
+          documents: [
+            { chapter: "..." } | { title: "...", items: ["...", "..."] }
+          ],
+          template: "github"
+        }
 [ remote_docs (Hono/Node.js) ]
         ├─ JWT 验证
-        ├─ 解析每个 markdown 为 HTML
-        ├─ 合并 HTML + 添加分页
-        └─ 转发 multipart 请求
+        ├─ 解析请求结构
+        ├─ 处理 config（标题、版权、作者等）
+        ├─ 处理 chapter（章节标题，分页控制）
+        ├─ 解析 items 中的每个 markdown 为 HTML
+        ├─ 合并 HTML + 添加分页样式
+        └─ 转发到 Gotenberg
         ↓
 [ Gotenberg ]
         ↓ PDF 二进制
@@ -44,14 +53,22 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Mark
 ```
 1. 客户端发送 POST /api/v1/pdf/export
    - JWT Token (Supabase)
-   - documents 数组 (多个 markdown)
-   - template 选项
+   - config 对象（可选）：caption, copyright, author, date 等
+   - documents 数组（必需）：
+     - { chapter: "章节名" } - 章节标题（可选）
+     - { title: "标题", items: ["md1", "md2"] } - 内容项
+   - template 选项（可选，默认 base）
+   - options（可选）：format, margin, showPageNumber, watermark, cssVars 等
 
 2. remote_docs 处理
    - 验证 JWT
    - 验证请求参数
-   - 解析每个 markdown → HTML
+   - 生成 config 头部 HTML（如果有）
+   - 处理每个 document item：
+     - chapter → 大标题（第一个与 config 同页，其余新页）
+     - content → 拼接所有 items 的 HTML
    - 合并 HTML，添加分页样式
+   - 添加页眉页脚（支持页码）
 
 3. 调用 Gotenberg
    - 发送 multipart/form-data
@@ -94,14 +111,22 @@ remote_docs/
 
 ## 分页策略
 
-每个文档自动开始新的一页，使用 CSS 实现：
+支持多种分页控制（所有功能均为可选）：
+
+1. **config 部分**（可选）：显示在首页顶部
+2. **chapter 章节**（可选）：
+   - 有 config 时：第一个 chapter 与 config 同页
+   - 无 config 时：第一个 chapter 在首页
+   - 后续 chapter 强制开始新页面 (`page-break-before: always`)
+3. **content 内容**：跟随前面的内容
+4. **无 chapter 时**：所有 content 项按顺序连续排列
+
+CSS 实现：
 
 ```css
-.document-section {
-  page-break-after: always;
-}
-.document-section:last-child {
-  page-break-after: auto;
+.page-break-before {
+  page-break-before: always;
+  break-before: page;
 }
 ```
 

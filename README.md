@@ -4,8 +4,12 @@ Gotenberg PDF 生成服务的轻量级封装，支持多文档合并导出。
 
 ## 特性
 
-- 多 Markdown 文档合并为单个 PDF
+- 多 Markdown 内容合并为单个 PDF
+- 章节标题支持（可选）
+- 全局配置：标题、版权、作者、日期等（可选）
 - 自动分页处理
+- 页码显示（支持自定义格式）
+- 水印支持（文字、透明度、角度、密度可配置）
 - LaTeX 数学公式支持（KaTeX）
 - 多种 PDF 模板（基础、GitHub 风格、试卷）
 - Supabase JWT 认证
@@ -15,9 +19,17 @@ Gotenberg PDF 生成服务的轻量级封装，支持多文档合并导出。
 
 ```
 [ Client ]
-    ↓ POST /api/v1/pdf/export (JWT + documents)
+    ↓ POST /api/v1/pdf/export
+    {
+      config?: {...},      // 可选
+      documents: [...],     // 必需
+      template?: "...",     // 可选
+      options?: {...}       // 可选
+    }
 [ remote_docs ]
     ├─ JWT 验证
+    ├─ 处理 config（可选）
+    ├─ 处理 chapter 章节标题（可选）
     ├─ Markdown → HTML
     └─ 合并文档 + 分页
     ↓
@@ -82,7 +94,7 @@ docker-compose up -d
 | GET | `/api/v1/health` | 健康检查 | 否 |
 | GET | `/ui` | Web 管理界面 | 否 |
 | GET | `/api/v1/pdf/templates` | 获取模板列表 | 是 |
-| POST | `/api/v1/pdf/export` | 导出 PDF | 是 |
+| POST | `/api/v1/pdf/export` | 导出 PDF（支持 config、chapter、items） | 是 |
 
 ## 技术栈
 
