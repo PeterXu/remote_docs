@@ -4,7 +4,7 @@ import { checkGotenbergHealth } from '../services/gotenberg';
 
 export const healthRouter = new Hono();
 
-// GET /api/v1/health
+// GET /api/v1/pdf/health
 healthRouter.get('/', async (c) => {
   const gotenbergOk = await checkGotenbergHealth();
 

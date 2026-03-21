@@ -307,7 +307,7 @@ export function serveUI(c: Context) {
 
     <footer>
       Powered by <a href="https://gotenberg.dev" target="_blank">Gotenberg</a> |
-      <a href="/api/v1/health">API Health</a>
+      <a href="/api/v1/pdf/health">API Health</a>
     </footer>
   </div>
 
@@ -378,7 +378,7 @@ export function serveUI(c: Context) {
     async function checkHealth() {
       const badge = document.getElementById('healthStatus');
       try {
-        const res = await fetch('/api/v1/health');
+        const res = await fetch('/api/v1/pdf/health');
         const data = await res.json();
         badge.textContent = data.status === 'healthy' ? 'Service: Healthy' : 'Service: ' + data.status;
       } catch (e) {

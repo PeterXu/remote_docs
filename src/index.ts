@@ -41,11 +41,11 @@ app.use(
 );
 
 // Health check (no auth required)
-app.route('/api/v1/health', healthRouter);
+app.route('/api/v1/pdf/health', healthRouter);
 
 // Web UI (no auth required)
-app.get('/ui', serveUI);
-app.get('/ui/', serveUI);
+app.get('/api/v1/pdf/ui', serveUI);
+app.get('/api/v1/pdf/ui/', serveUI);
 
 // PDF export (auth required)
 const protectedApi = new Hono();

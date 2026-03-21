@@ -10,7 +10,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest src"
+    "test": "vitest src",
+    "docker:deploy": "bash tools/docker-deploy.sh"
   },
   "keywords": [],
   "author": "",

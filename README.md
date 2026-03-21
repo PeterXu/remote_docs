@@ -91,8 +91,8 @@ docker-compose up -d
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|------|
-| GET | `/api/v1/health` | 健康检查 | 否 |
-| GET | `/ui` | Web 管理界面 | 否 |
+| GET | `/api/v1/pdf/health` | 健康检查 | 否 |
+| GET | `/api/v1/pdf/ui` | Web 管理界面 | 否 |
 | GET | `/api/v1/pdf/templates` | 获取模板列表 | 是 |
 | POST | `/api/v1/pdf/export` | 导出 PDF（支持 config、chapter、items） | 是 |
 

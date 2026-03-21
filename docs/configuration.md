@@ -72,7 +72,7 @@ npm start
 
 ```bash
 # 健康检查
-curl http://localhost:3000/api/v1/health
+curl http://localhost:3000/api/v1/pdf/health
 ```
 
 期望响应：
@@ -220,7 +220,7 @@ server {
 # Kubernetes liveness probe 示例
 livenessProbe:
   httpGet:
-    path: /api/v1/health
+    path: /api/v1/pdf/health
     port: 3000
   initialDelaySeconds: 10
   periodSeconds: 30
