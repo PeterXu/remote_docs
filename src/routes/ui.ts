@@ -73,7 +73,7 @@ export function serveUI(c: Context) {
       position: relative;
       border-left: 4px solid #667eea;
     }
-    .doc-item.chapter-item { border-left-color: #ff6b6b; }
+    .doc-item.page-break-item { border-left-color: #ff6b6b; background: #fff5f5; }
     .doc-item .remove-btn {
       position: absolute;
       top: 12px;
@@ -102,7 +102,7 @@ export function serveUI(c: Context) {
       font-size: 0.7rem;
       font-weight: 500;
     }
-    .doc-item.chapter-item .type-badge { background: #ff6b6b; }
+    .doc-item.page-break-item .type-badge { background: #ff6b6b; }
     .btn {
       padding: 10px 20px;
       border: none;
@@ -199,11 +199,13 @@ export function serveUI(c: Context) {
     <div class="card">
       <div class="card-title">
         Documents
-        <span style="margin-left: auto; font-size: 0.85rem; font-weight: normal; color: #888;">Chapters and Content</span>
+        <span style="margin-left: auto; font-size: 0.8rem; font-weight: normal; color: #666;">
+          Use headings (# ## ###) for structure. Use PAGE_BREAK button to force new pages.
+        </span>
       </div>
       <div class="btn-group" style="margin-top: 0; margin-bottom: 16px;">
-        <button class="btn btn-secondary btn-small" onclick="addChapter()">+ Add Chapter</button>
-        <button class="btn btn-secondary btn-small" onclick="addContent()">+ Add Content</button>
+        <button class="btn btn-secondary btn-small" onclick="addDocument()">+ Add Content Block</button>
+        <button class="btn btn-secondary btn-small" onclick="addPageBreak()">+ Add Page Break</button>
       </div>
       <div id="documents"></div>
     </div>
@@ -314,51 +316,29 @@ export function serveUI(c: Context) {
   <script>
     let docCount = 0;
 
-    function addChapter(title = '') {
+    function addDocument(content = '') {
       docCount++;
       const container = document.getElementById('documents');
       const div = document.createElement('div');
-      div.className = 'doc-item chapter-item';
+      div.className = 'doc-item';
       div.id = 'doc-' + docCount;
-      div.dataset.type = 'chapter';
-      div.innerHTML = '<button class="remove-btn" onclick="removeDocument(' + docCount + ')">×</button>' +
-        '<span class="type-badge">Chapter</span>' +
-        '<div class="form-group" style="margin-right: 80px;">' +
-        '<label>Chapter Title</label>' +
-        '<input type="text" class="doc-chapter" placeholder="Chapter 1: Introduction" value="' + escapeHtml(title) + '"></div>';
-      container.appendChild(div);
-    }
-
-    function addContent(title = '', items = ['']) {
-      docCount++;
-      const container = document.getElementById('documents');
-      const div = document.createElement('div');
-      div.className = 'doc-item content-item';
-      div.id = 'doc-' + docCount;
-      div.dataset.type = 'content';
       div.innerHTML = '<button class="remove-btn" onclick="removeDocument(' + docCount + ')">×</button>' +
         '<span class="type-badge">Content</span>' +
-        '<div class="form-group" style="margin-right: 80px;"><label>Title (optional)</label>' +
-        '<input type="text" class="doc-title" placeholder="Content title" value="' + escapeHtml(title) + '"></div>' +
-        '<div class="form-group"><label>Markdown Content (multiple blocks)</label>' +
-        '<div id="items-' + docCount + '"></div>' +
-        '<button class="btn btn-secondary btn-small" style="margin-top: 8px;" onclick="addContentBlock(' + docCount + ')">+ Add Block</button></div>';
+        '<div class="form-group" style="margin-right: 50px;">' +
+        '<label>Markdown Content</label>' +
+        '<textarea class="doc-content" rows="6" placeholder="# Your markdown here...\\n\\nUse headings (# ## ###) for structure.\\nUse &lt;!-- PAGE_BREAK --&gt; to force a new page.">' + escapeHtml(content) + '</textarea></div>';
       container.appendChild(div);
-      // Add initial content blocks
-      const itemsContainer = div.querySelector('#items-' + docCount);
-      items.forEach(item => addContentBlock(docCount, item));
     }
 
-    function addContentBlock(docId, content = '') {
-      const container = document.getElementById('items-' + docId);
-      const blockId = 'block-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    function addPageBreak() {
+      docCount++;
+      const container = document.getElementById('documents');
       const div = document.createElement('div');
-      div.className = 'form-group';
-      div.style.marginBottom = '8px';
-      div.innerHTML = '<div style="display: flex; gap: 8px;">' +
-        '<textarea class="doc-content-item" rows="4" placeholder="# Your markdown here..." style="flex: 1;">' + escapeHtml(content) + '</textarea>' +
-        '<button class="btn btn-secondary btn-small" onclick="this.parentElement.parentElement.remove()" style="align-self: flex-start;">×</button>' +
-        '</div>';
+      div.className = 'doc-item page-break-item';
+      div.id = 'doc-' + docCount;
+      div.innerHTML = '<button class="remove-btn" onclick="removeDocument(' + docCount + ')">×</button>' +
+        '<span class="type-badge">Page Break</span>' +
+        '<div class="form-group" style="margin-right: 50px; padding: 8px 0; color: #666; font-style: italic;">&lt;!-- PAGE_BREAK --&gt;</div>';
       container.appendChild(div);
     }
 
@@ -398,29 +378,22 @@ export function serveUI(c: Context) {
         return;
       }
 
-      // Build documents array
+      // Build documents array - simplified to string array
       const documents = [];
       document.querySelectorAll('.doc-item').forEach(item => {
-        const type = item.dataset.type;
-        if (type === 'chapter') {
-          const chapter = item.querySelector('.doc-chapter')?.value.trim();
-          if (chapter) {
-            documents.push({ chapter });
-          }
-        } else if (type === 'content') {
-          const title = item.querySelector('.doc-title')?.value.trim();
-          const contentItems = item.querySelectorAll('.doc-content-item');
-          const items = Array.from(contentItems)
-            .map(el => el.value.trim())
-            .filter(v => v);
-          if (items.length > 0) {
-            documents.push({ title: title || undefined, items });
+        const isPageBreak = item.classList.contains('page-break-item');
+        if (isPageBreak) {
+          documents.push('<!-- PAGE_BREAK -->');
+        } else {
+          const content = item.querySelector('.doc-content')?.value.trim();
+          if (content) {
+            documents.push(content);
           }
         }
       });
 
       if (documents.length === 0) {
-        showStatus('error', 'Please add at least one chapter or content section');
+        showStatus('error', 'Please add at least one content block');
         return;
       }
 
@@ -525,10 +498,9 @@ export function serveUI(c: Context) {
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
       document.getElementById('copyright').value = '© 2024 My Company';
       // Add documents
-      addChapter('Chapter 1: Introduction');
-      addContent('', ['# Introduction\\n\\n## What is remote_docs?\\n\\nremote_docs is a **lightweight PDF generation service**.\\n\\n### Features\\n\\n- Multiple document merging\\n- Automatic page breaks\\n- LaTeX math support\\n- Multiple templates'].join('\\n\\n'));
-      addChapter('Chapter 2: Math Formulas');
-      addContent('Math Examples', ['# Math Formulas\\n\\nInline: $E = mc^2$\\n\\nBlock:\\n\\n$$\\\\int_0^1 x^2 \\\\, dx = \\\\frac{1}{3}$$'].join('\\n\\n'));
+      addDocument('# Introduction\\n\\n## What is remote_docs?\\n\\nremote_docs is a **lightweight PDF generation service**.\\n\\n### Features\\n\\n- Multiple document merging\\n- Automatic page breaks\\n- LaTeX math support\\n- Multiple templates');
+      addPageBreak();
+      addDocument('# Math Formulas\\n\\nInline: $E = mc^2$\\n\\nBlock:\\n\\n$$\\\\int_0^1 x^2 \\\\, dx = \\\\frac{1}{3}$$');
     }
 
     function clearAll() {
@@ -549,7 +521,7 @@ export function serveUI(c: Context) {
     });
 
     // Initialize with one content section
-    addContent();
+    addDocument();
     checkHealth();
     setInterval(checkHealth, 30000);
   </script>

@@ -129,21 +129,7 @@ interface PDFExportRequest {
   // === 必需字段 ===
 
   // 文档内容数组（必需，1-50 项）
-  documents: DocumentItem[];
-}
-
-// 文档项类型（可选使用 chapter 或 content）
-type DocumentItem = ChapterItem | ContentItem;
-
-// 章节标题项（可选，用于分节）
-interface ChapterItem {
-  chapter: string;  // 章节名称，显示为大标题
-}
-
-// 内容项
-interface ContentItem {
-  title?: string;   // 可选的小标题
-  items: string[];  // Markdown 内容数组，按顺序直接拼接渲染
+  documents: string[];
 }
 ```
 
@@ -152,9 +138,7 @@ interface ContentItem {
 ```json
 {
   "documents": [
-    {
-      "items": ["# Hello\n\n最简单的请求。"]
-    }
+    "# Hello\n\n最简单的请求。"
   ]
 }
 ```
@@ -164,10 +148,24 @@ interface ContentItem {
 | 功能 | 是否必需 | 说明 |
 |------|----------|------|
 | `config` | ❌ 可选 | 全局配置，不传则无标题/版权等 |
-| `documents` | ✅ 必需 | 至少包含一个 content 项 |
-| `chapter` 项 | ❌ 可选 | 可在 documents 中穿插章节标题 |
+| `documents` | ✅ 必需 | 字符串数组（1-50个），每个元素为 markdown 内容 |
 | `template` | ❌ 可选 | 默认 "base" |
 | `options` | ❌ 可选 | 默认 A4 纸张 |
+| `<!-- PAGE_BREAK -->` | ❌ 可选 | 在 markdown 中使用此注释强制分页 |
+
+**强制分页语法：**
+
+在 markdown 内容中使用 `<!-- PAGE_BREAK -->` 可以强制分页：
+
+```json
+{
+  "documents": [
+    "# 第一章\n\n这是第一章的内容。",
+    "<!-- PAGE_BREAK -->",
+    "# 第二章\n\n这是新的一页，第二章的内容。"
+  ]
+}
+```
 
 **请求示例：**
 
@@ -193,19 +191,14 @@ interface ContentItem {
     "author": "John Doe"
   },
   "documents": [
-    {
-      "title": "项目介绍",
-      "items": [
-        "# 项目简介\n\n这是项目的介绍内容。",
-        "## 主要功能\n\n- 功能一\n- 功能二"
-      ]
-    }
+    "# 项目介绍\n\n这是项目的介绍内容。",
+    "## 主要功能\n\n- 功能一\n- 功能二"
   ],
   "template": "github"
 }
 ```
 
-**示例 3: 带章节的文档（chapter 可选）**
+**示例 3: 带章节的文档（使用 markdown 标题）**
 
 ```json
 {
@@ -213,23 +206,21 @@ interface ContentItem {
     "caption": "产品文档"
   },
   "documents": [
-    {"chapter": "第一部分：概述"},        // ← 可选章节
-    {"title": "介绍", "items": ["..."]},
-    {"title": "功能", "items": ["..."]},
-    {"chapter": "第二部分：技术"},        // ← 可选章节
-    {"title": "API", "items": ["..."]}
+    "# 第一部分：概述\n\n这是介绍内容...",
+    "<!-- PAGE_BREAK -->",
+    "# 第二部分：技术\n\n这是技术内容..."
   ]
 }
 ```
 
-**示例 4: 无章节的简单列表**
+**示例 4: 多个文档项**
 
 ```json
 {
   "documents": [
-    {"title": "第一部分", "items": ["内容 A"]},
-    {"title": "第二部分", "items": ["内容 B"]},
-    {"title": "第三部分", "items": ["内容 C"]}
+    "# 第一部分\n\n内容 A",
+    "# 第二部分\n\n内容 B",
+    "# 第三部分\n\n内容 C"
   ]
 }
 ```
@@ -252,7 +243,7 @@ interface ContentItem {
     }
   },
   "documents": [
-    {"title": "机密内容", "items": ["# 绝密\n\n这是内部资料。"]}
+    "# 绝密\n\n这是内部资料。"
   ]
 }
 ```
@@ -270,8 +261,8 @@ interface ContentItem {
     "pageNumberFormat": "第 {page} 页"
   },
   "documents": [
-    {"title": "第一章", "items": ["# 第一章\n\n内容..."]},
-    {"title": "第二章", "items": ["# 第二章\n\n内容..."]}
+    "# 第一章\n\n内容...",
+    "# 第二章\n\n内容..."
   ]
 }
 ```
@@ -292,32 +283,10 @@ interface ContentItem {
     "showPageNumber": true
   },
   "documents": [
-    {
-      "chapter": "第一部分：题目"
-    },
-    {
-      "title": "一、选择题（每题 5 分，共 30 分）",
-      "items": [
-        "**1. 下列哪个是质数？**\n\n- A. 1\n- B. 2\n- C. 4\n- D. 6",
-        "**2. 设 $f(x) = x^2 - 3x + 2$，则 $f(2) = $**\n\n- A. 0\n- B. 1\n- C. 2\n- D. 4"
-      ]
-    },
-    {
-      "title": "二、填空题（每题 10 分，共 20 分）",
-      "items": [
-        "**1.** 勾股定理的内容是：$a^2 + b^2 = $ `__________`",
-        "**2.** 一元二次方程的求根公式是 $x = $ `__________`"
-      ]
-    },
-    {
-      "chapter": "第二部分：参考答案"
-    },
-    {
-      "title": "一、选择题答案",
-      "items": [
-        "1. B (2 是质数)\n2. A (f(2) = 4 - 6 + 2 = 0)"
-      ]
-    }
+    "# 第一部分：题目\n\n## 一、选择题（每题 5 分，共 30 分）\n\n**1. 下列哪个是质数？**\n\n- A. 1\n- B. 2\n- C. 4\n- D. 6\n\n**2. 设 $f(x) = x^2 - 3x + 2$，则 $f(2) = $**\n\n- A. 0\n- B. 1\n- C. 2\n- D. 4",
+    "## 二、填空题（每题 10 分，共 20 分）\n\n**1.** 勾股定理的内容是：$a^2 + b^2 = $ `__________`\n\n**2.** 一元二次方程的求根公式是 $x = $ `__________`",
+    "<!-- PAGE_BREAK -->",
+    "# 第二部分：参考答案\n\n## 一、选择题答案\n\n1. B (2 是质数)\n2. A (f(2) = 4 - 6 + 2 = 0)"
   ],
   "template": "exam",
   "options": {
@@ -332,10 +301,9 @@ interface ContentItem {
 **分页规则：**
 
 1. **config 部分**：显示在文档首页（如果有 config）
-2. **第一个 chapter**：与 config 同页显示（如果没有 config 则为首页）
-3. **后续 chapter**：强制开始新页面
-4. **content 项**：跟随前面的内容
-5. **无 chapter 时**：所有 content 项按顺序排列
+2. **文档内容**：所有 items 按顺序拼接渲染
+3. **强制分页**：在 markdown 中使用 `<!-- PAGE_BREAK -->` 可强制开始新页面
+4. **自然分页**：内容超出一页时自动分页
 
 **参数说明：**
 
@@ -361,14 +329,9 @@ interface ContentItem {
 | `options.watermark.angle` | number | ❌ | `-30` | 旋转角度（度） |
 | `options.watermark.density` | string | ❌ | `"normal"` | 密度：`sparse`/`normal`/`dense` |
 | `options.cssVars` | object | ❌ | - | CSS 变量覆盖 |
-| `documents` | array | ✅ | - | 文档项数组（1-50个） |
-| `documents[].chapter` | string | ❌† | - | 章节名称（使用 chapter 时仅此字段） |
-| `documents[].title` | string | ❌‡ | - | 内容项的小标题 |
-| `documents[].items` | array | ✅‡ | - | 内容项的 Markdown 数组 |
+| `documents` | array | ✅ | - | 字符串数组（1-50个），每个元素为 markdown 内容 |
 
 * 使用水印时 `text` 必需
-† chapter 类型：必须包含 `chapter` 字段
-‡ content 类型：必须包含 `items` 字段，`title` 可选
 
 **限制：**
 - 最大 50 个文档项
@@ -426,10 +389,6 @@ const supabase = createClient(
 );
 
 // 类型定义
-interface ChapterItem { chapter: string; }
-interface ContentItem { title?: string; items: string[]; }
-type DocumentItem = ChapterItem | ContentItem;
-
 interface PDFExportRequest {
   config?: {  // 可选
     caption?: string;
@@ -438,7 +397,7 @@ interface PDFExportRequest {
     author?: string;
     date?: string;
   };
-  documents: DocumentItem[];  // 必需
+  documents: string[];  // 必需
   template?: 'base' | 'github' | 'exam';  // 可选，默认 'base'
   options?: {  // 可选
     format?: 'A4' | 'Letter';
@@ -496,14 +455,8 @@ const pdfUrl = await exportPDF({
     author: 'John Doe'
   },
   documents: [
-    { chapter: '第一章：概述' },  // 章节可选
-    {
-      title: '项目介绍',
-      items: [
-        '# 简介\n\n这是项目介绍。',
-        '## 功能\n\n- 功能一\n- 功能二'
-      ]
-    }
+    '# 第一章：概述\n\n这是项目介绍。',
+    '## 功能\n\n- 功能一\n- 功能二'
   ],
   template: 'github'
 });
@@ -517,24 +470,19 @@ const examPdf = await exportPDF({
     date: new Date().toISOString().split('T')[0]
   },
   documents: [
-    { chapter: '第一部分：题目' },
-    {
-      title: '一、选择题',
-      items: [
-        '**1. 下列哪个是质数？**\n\n- A. 1\n- B. 2\n- C. 4',
-        '**2. $2 + 2 = $**\n\n- A. 3\n- B. 4\n- C. 5'
-      ]
-    }
+    '# 第一部分：题目\n\n## 一、选择题\n\n**1. 下列哪个是质数？**\n\n- A. 1\n- B. 2\n- C. 4',
+    '<!-- PAGE_BREAK -->',
+    '# 第二部分：答案\n\n1. B (2 是质数)'
   ],
   template: 'exam'
 });
 
-// 示例 4: 无章节的简单列表
+// 示例 4: 简单列表
 const simplePdf = await exportPDF({
   documents: [
-    { title: '第一部分', items: ['内容 A'] },
-    { title: '第二部分', items: ['内容 B'] },
-    { title: '第三部分', items: ['内容 C'] }
+    '# 第一部分\n\n内容 A',
+    '# 第二部分\n\n内容 B',
+    '# 第三部分\n\n内容 C'
   ]
 });
 
@@ -554,7 +502,7 @@ const confidentialPdf = await exportPDF({
     }
   },
   documents: [
-    { title: '机密内容', items: ['# 绝密\n\n这是内部资料，请勿外传。'] }
+    '# 绝密\n\n这是内部资料，请勿外传。'
   ]
 });
 ```
@@ -565,9 +513,7 @@ const confidentialPdf = await exportPDF({
 // supabase/functions/pdf-proxy/index.ts
 import { createClient } from '@supabase/supabase-js';
 
-interface DocumentItem =
-  | { chapter: string }
-  | { title?: string; items: string[] };
+interface DocumentItem = string;
 
 interface PDFRequest {
   config?: {
@@ -575,7 +521,7 @@ interface PDFRequest {
     copyright?: string;
     author?: string;
   };
-  documents: DocumentItem[];
+  documents: string[];
   template?: 'base' | 'github' | 'exam';
   options?: {
     format?: 'A4' | 'Letter';
@@ -643,11 +589,7 @@ curl -X POST http://localhost:3000/api/v1/pdf/export \
       "copyright": "My Company"
     },
     "documents": [
-      { "chapter": "第一章：概述" },
-      {
-        "title": "项目介绍",
-        "items": ["# 简介\n\n这是项目介绍。"]
-      }
+      "# 第一章：概述\n\n这是项目介绍。"
     ],
     "template": "github"
   }' \
@@ -664,13 +606,7 @@ curl -X POST http://localhost:3000/api/v1/pdf/export \
       "copyright": "XX学校"
     },
     "documents": [
-      { "chapter": "第一部分：题目" },
-      {
-        "title": "一、选择题",
-        "items": [
-          "**1. 下列哪个是质数？**\n\n- A. 1\n- B. 2\n- C. 4"
-        ]
-      }
+      "# 第一部分：题目\n\n## 一、选择题\n\n**1. 下列哪个是质数？**\n\n- A. 1\n- B. 2\n- C. 4"
     ],
     "template": "exam"
   }' \
@@ -695,10 +631,22 @@ curl -X POST http://localhost:3000/api/v1/pdf/export \
       }
     },
     "documents": [
-      {"title": "机密内容", "items": ["# 绝密\n\n这是内部资料。"]}
+      "# 绝密\n\n这是内部资料。"
     ]
   }' \
   -o confidential.pdf
+```
+
+---
+
+## Markdown 语法支持
+
+### 强制分页
+
+在 markdown 中使用以下语法强制分页：
+
+```markdown
+<!-- PAGE_BREAK -->
 ```
 
 ---
@@ -849,10 +797,9 @@ $$
 ### 完整示例
 ```json
 {
-  "documents": [{
-    "title": "2024年第一学期期末考试",
-    "markdown": "# 数学试卷\n\n## 考生信息\n\n**姓名:** `__________` **班级:** `__________` **学号:** `__________`\n\n---\n\n## 注意事项\n\n> ⚠️ 考试须知\n>\n> 1. 本试卷共 4 页,满分 100 分,考试时间 120 分钟.\n> 2. 请用黑色签字笔答题,字迹工整.\n\n---\n\n## 一、选择题(每题 5 分,共 30 分)\n\n**1. 下列哪个是质数?**\n\n- A. 1\n- B. 2\n- C. 4\n- D. 6\n\n**2. 设 $f(x) = x^2 - 3x + 2$, 则 $f(2) = $\n\n- A. 0\n- B. 1\n- C. 2\n- D. 4\n"
-  }],
+  "documents": [
+    "# 数学试卷\n\n## 考生信息\n\n**姓名:** `__________` **班级:** `__________` **学号:** `__________`\n\n---\n\n## 注意事项\n\n> ⚠️ 考试须知\n>\n> 1. 本试卷共 4 页,满分 100 分,考试时间 120 分钟.\n> 2. 请用黑色签字笔答题,字迹工整.\n\n---\n\n## 一、选择题(每题 5 分,共 30 分)\n\n**1. 下列哪个是质数?**\n\n- A. 1\n- B. 2\n- C. 4\n- D. 6\n\n**2. 设 $f(x) = x^2 - 3x + 2$, 则 $f(2) = $\n\n- A. 0\n- B. 1\n- C. 2\n- D. 4\n"
+  ],
   "template": "exam"
 }
 ```
@@ -861,7 +808,9 @@ $$
 
 ## 分页行为
 
-每个文档（documents 数组中的元素）会自动开始新的一页。最后一个文档不会添加多余的空白页。
+1. **默认行为**：内容按顺序拼接，自然分页
+2. **强制分页**：在 markdown 中使用 `<!-- PAGE_BREAK -->` 强制开始新页面
+3. **config 区域**：如果有 config，显示在文档首页
 
 ```
 ┌─────────────┐

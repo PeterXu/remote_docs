@@ -75,6 +75,21 @@ describe('PDF Export Service', () => {
       // markdown-it escapes HTML when html: false
       expect(result).not.toContain('<div>');
     });
+
+    it('should render page break as HTML element', () => {
+      const result = parseMarkdown('Content before\n<!-- PAGE_BREAK -->\nContent after');
+      // Page break should be rendered as actual HTML element, not escaped text
+      expect(result).toContain('<div class="page-break-before">&nbsp;</div>');
+      // Should NOT contain the escaped version
+      expect(result).not.toContain('&lt;div class="page-break-before"&gt;');
+    });
+
+    it('should handle multiple page breaks', () => {
+      const result = parseMarkdown('Section 1\n<!-- PAGE_BREAK -->\nSection 2\n<!-- PAGE_BREAK -->\nSection 3');
+      // Count how many times the page-break-before div appears
+      const matches = result.match(/<div class="page-break-before">&nbsp;<\/div>/g);
+      expect(matches?.length).toBe(2);
+    });
   });
 
   describe('Validation Logic', () => {
@@ -89,13 +104,13 @@ describe('PDF Export Service', () => {
       if (body.documents.length > 50) {
         return { valid: false, error: 'TOO_MANY_DOCUMENTS' };
       }
-      const totalSize = body.documents.reduce((sum: number, doc: any) => sum + (doc.markdown?.length || 0), 0);
+      const totalSize = body.documents.reduce((sum: number, doc: any) => sum + (typeof doc === 'string' ? doc.length : 0), 0);
       if (totalSize > 10 * 1024 * 1024) {
         return { valid: false, error: 'PAYLOAD_TOO_LARGE' };
       }
       for (let i = 0; i < body.documents.length; i++) {
-        if (!body.documents[i].markdown) {
-          return { valid: false, error: `documents[${i}].markdown is required` };
+        if (typeof body.documents[i] !== 'string') {
+          return { valid: false, error: `documents[${i}] must be a string` };
         }
       }
       return { valid: true };
@@ -114,29 +129,26 @@ describe('PDF Export Service', () => {
     });
 
     it('should reject more than 50 documents', () => {
-      const documents = Array(51).fill({ markdown: 'test' });
+      const documents = Array(51).fill('test content');
       const result = validateRequest({ documents });
       expect(result.valid).toBe(false);
       expect(result.error).toBe('TOO_MANY_DOCUMENTS');
     });
 
     it('should accept exactly 50 documents', () => {
-      const documents = Array(50).fill({ markdown: 'test' });
+      const documents = Array(50).fill('test content');
       const result = validateRequest({ documents });
       expect(result.valid).toBe(true);
     });
 
-    it('should reject documents without markdown', () => {
-      const result = validateRequest({ documents: [{ title: 'No content' }] });
+    it('should reject non-string documents', () => {
+      const result = validateRequest({ documents: [123, null, 'valid'] });
       expect(result.valid).toBe(false);
     });
 
     it('should accept valid request', () => {
       const result = validateRequest({
-        documents: [
-          { title: 'Section 1', markdown: '# Hello' },
-          { title: 'Section 2', markdown: '## World' }
-        ]
+        documents: ['# Hello', '## World', 'Some content']
       });
       expect(result.valid).toBe(true);
     });

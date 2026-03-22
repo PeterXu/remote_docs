@@ -9,45 +9,18 @@ const md = new MarkdownIt({
   breaks: true, // Convert \n to <br>
 });
 
-// 使用KaTeX渲染LaTeX公式
-function renderKatex(html: string): string {
-  // 先处理块级公式 $$...$$
-  html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) => {
-    try {
-      const rendered = katex.renderToString(formula.trim(), {
-        displayMode: true,
-        throwOnError: false,
-        output: 'html',
-      });
-      return `<div class="katex-block">${rendered}</div>`;
-    } catch (e) {
-      // 渲染失败时显示原始公式
-      return `<div class="katex-block katex-error">${formula.trim()}</div>`;
-    }
-  });
+/** 分页标记 - 用于强制分页 */
+export const PAGE_BREAK_MARKER = '<!-- PAGE_BREAK -->';
+export const PAGE_BREAK_HTML = '<div class="page-break-before">&nbsp;</div>';
 
-  // 再处理行内公式 $...$（避免匹配货币符号）
-  html = html.replace(/(?<![a-zA-Z])\$([^\$\n]+?)\$(?![a-zA-Z])/g, (_, formula) => {
-    try {
-      const rendered = katex.renderToString(formula.trim(), {
-        displayMode: false,
-        throwOnError: false,
-        output: 'html',
-      });
-      return `<span class="katex-inline">${rendered}</span>`;
-    } catch (e) {
-      // 渲染失败时显示原始公式
-      return `<span class="katex-inline katex-error">${formula.trim()}</span>`;
-    }
-  });
-
-  return html;
-}
+/** 分页占位符 - 在Markdown渲染后替换为HTML */
+const PAGE_BREAK_PLACEHOLDER = '%%PAGE_BREAK%%';
 
 export function parseMarkdown(content: string): string {
-  // 先处理LaTeX公式，再进行Markdown渲染
-  // 这样可以避免Markdown解析器干扰LaTeX语法
-  let processed = content;
+  // 先处理分页标记 - 使用占位符避免被Markdown HTML过滤
+  let processed = content.replace(/<!--\s*PAGE_BREAK\s*-->/gi, PAGE_BREAK_PLACEHOLDER);
+
+  // 然后处理LaTeX公式，避免Markdown解析器干扰LaTeX语法
 
   // 临时替换块级公式以保护它们
   const blockFormulas: string[] = [];
@@ -95,6 +68,9 @@ export function parseMarkdown(content: string): string {
       html = html.replace(`%%INLINE_FORMULA_${index}%%`, formula);
     }
   });
+
+  // 最后处理分页标记 - 在Markdown渲染后替换为HTML（处理所有出现）
+  html = html.replaceAll(PAGE_BREAK_PLACEHOLDER, PAGE_BREAK_HTML);
 
   return html;
 }

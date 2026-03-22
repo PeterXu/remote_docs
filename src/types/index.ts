@@ -18,22 +18,8 @@ export interface PDFConfig {
   date?: string;
 }
 
-/** 章节标题项 */
-export interface ChapterItem {
-  /** 章节名称，显示为大标题。第一个章节与 caption 同页，其余章节强制新页 */
-  chapter: string;
-}
-
-/** 内容项 */
-export interface ContentItem {
-  /** 可选的小标题 */
-  title?: string;
-  /** Markdown 内容数组，按顺序直接拼接渲染 */
-  items: string[];
-}
-
-/** 文档项类型 */
-export type DocumentItem = ChapterItem | ContentItem;
+/** 文档内容项 */
+export type DocumentItem = string;
 
 /** 水印配置 */
 export interface WatermarkConfig {

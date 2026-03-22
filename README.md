@@ -5,9 +5,9 @@ Gotenberg PDF 生成服务的轻量级封装，支持多文档合并导出。
 ## 特性
 
 - 多 Markdown 内容合并为单个 PDF
-- 章节标题支持（可选）
+- 层次结构由 Markdown 标题控制
+- 强制分页语法支持（`<!-- PAGE_BREAK -->`）
 - 全局配置：标题、版权、作者、日期等（可选）
-- 自动分页处理
 - 页码显示（支持自定义格式）
 - 水印支持（文字、透明度、角度、密度可配置）
 - LaTeX 数学公式支持（KaTeX）
@@ -29,9 +29,8 @@ Gotenberg PDF 生成服务的轻量级封装，支持多文档合并导出。
 [ remote_docs ]
     ├─ JWT 验证
     ├─ 处理 config（可选）
-    ├─ 处理 chapter 章节标题（可选）
-    ├─ Markdown → HTML
-    └─ 合并文档 + 分页
+    ├─ Markdown → HTML（支持 <!-- PAGE_BREAK --> 强制分页）
+    └─ 合并文档
     ↓
 [ Gotenberg ]
     ↓ PDF binary
@@ -94,7 +93,7 @@ docker-compose up -d
 | GET | `/api/v1/pdf/health` | 健康检查 | 否 |
 | GET | `/api/v1/pdf/ui` | Web 管理界面 | 否 |
 | GET | `/api/v1/pdf/templates` | 获取模板列表 | 是 |
-| POST | `/api/v1/pdf/export` | 导出 PDF（支持 config、chapter、items） | 是 |
+| POST | `/api/v1/pdf/export` | 导出 PDF（支持 config、items、强制分页） | 是 |
 
 ## 技术栈
 

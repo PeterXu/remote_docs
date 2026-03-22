@@ -9,8 +9,6 @@ import type {
   MultiPDFExportRequest,
   User,
   PDFConfig,
-  ChapterItem,
-  ContentItem,
   WatermarkConfig
 } from '../types';
 
@@ -26,16 +24,6 @@ const sanitizeValue = (value: string): string => {
   // Remove quotes and escape special characters
   return value.replace(/['"]/g, '').replace(/;/g, '\\3b ');
 };
-
-// Type guard for ChapterItem
-function isChapterItem(item: any): item is ChapterItem {
-  return item && typeof item.chapter === 'string';
-}
-
-// Type guard for ContentItem
-function isContentItem(item: any): item is ContentItem {
-  return item && Array.isArray(item.items);
-}
 
 // Generate config header HTML
 function generateConfigHeader(config: PDFConfig, isFirstContent = false): string {
@@ -247,12 +235,8 @@ pdfRouter.post('/export', async (c) => {
   // Validate total content size (10MB limit)
   let totalSize = 0;
   for (const doc of body.documents) {
-    if (isContentItem(doc)) {
-      for (const item of doc.items) {
-        totalSize += (item?.length || 0);
-      }
-    } else if (isChapterItem(doc)) {
-      totalSize += doc.chapter.length;
+    if (typeof doc === 'string') {
+      totalSize += doc.length;
     }
   }
 
@@ -266,24 +250,14 @@ pdfRouter.post('/export', async (c) => {
     );
   }
 
-  // Validate each document item
+  // Validate each document item is a string
   for (let i = 0; i < body.documents.length; i++) {
     const doc = body.documents[i];
-    if (!isChapterItem(doc) && !isContentItem(doc)) {
+    if (typeof doc !== 'string') {
       return c.json(
         {
           success: false,
-          error: { code: 'INVALID_REQUEST', message: `documents[${i}] must be a chapter item (with 'chapter') or content item (with 'items' array)` },
-        },
-        400
-      );
-    }
-
-    if (isContentItem(doc) && (!doc.items || doc.items.length === 0)) {
-      return c.json(
-        {
-          success: false,
-          error: { code: 'INVALID_REQUEST', message: `documents[${i}].items array cannot be empty` },
+          error: { code: 'INVALID_REQUEST', message: `documents[${i}] must be a string` },
         },
         400
       );
@@ -309,8 +283,6 @@ pdfRouter.post('/export', async (c) => {
 
   try {
     const sections: string[] = [];
-    let isFirstContent = true;
-    let hasSeenFirstChapter = false;
 
     // Generate config header at the start
     const configHeader = generateConfigHeader(config, true);
@@ -320,40 +292,8 @@ pdfRouter.post('/export', async (c) => {
 
     // Process each document item
     for (const doc of body.documents) {
-      if (isChapterItem(doc)) {
-        // Chapter item - creates a section header
-        const pageBreakClass = hasSeenFirstChapter ? 'page-break-before' : '';
-        hasSeenFirstChapter = true;
-        isFirstContent = false;
-
-        sections.push(`
-  <div class="chapter-section ${pageBreakClass}">
-    <h1 class="chapter-title">${escapeHtml(doc.chapter)}</h1>
-  </div>`);
-      } else if (isContentItem(doc)) {
-        // Content item - renders title + concatenated items
-        const contentParts: string[] = [];
-
-        // Optional title
-        if (doc.title) {
-          contentParts.push(`<h2 class="content-title">${escapeHtml(doc.title)}</h2>`);
-        }
-
-        // Concatenate all items (directly joined)
-        for (const item of doc.items) {
-          contentParts.push(parseMarkdown(item));
-        }
-
-        const pageBreakClass = hasSeenFirstChapter ? 'page-break-before' : '';
-        if (hasSeenFirstChapter) {
-          isFirstContent = false;
-        }
-
-        sections.push(`
-  <div class="content-section ${pageBreakClass}">
-    ${contentParts.join('\n')}
-  </div>`);
-      }
+      // Parse markdown directly, page breaks handled via <!-- PAGE_BREAK -->
+      sections.push(`<div class="content-section">${parseMarkdown(doc)}</div>`);
     }
 
     // Generate CSS variables override
@@ -467,35 +407,18 @@ ${cssVarsOverride}
   margin-bottom: 20px;
 }
 
-.chapter-section {
-  margin-top: 30px;
-}
-
-.chapter-title {
-  font-size: 22px;
-  font-weight: bold;
-  border-bottom: 2px solid #333;
-  padding-bottom: 10px;
-  margin: 20px 0 30px;
-  color: #333;
-}
-
 .content-section {
-  margin-bottom: 20px;
-}
-
-.content-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 20px 0 15px;
-  color: #444;
-  padding-left: 10px;
-  border-left: 4px solid #667eea;
+  margin-bottom: 50px;
 }
 
 .page-break-before {
   page-break-before: always;
   break-before: page;
+  height: 0;
+  line-height: 0;
+  font-size: 0;
+  margin: 0;
+  padding: 0;
 }
 
 /* Page number styling (CSS counter) */

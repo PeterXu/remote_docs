@@ -12,17 +12,14 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Mark
         Authorization: Bearer <supabase_jwt>
         {
           config: { caption, copyright, author, ... },
-          documents: [
-            { chapter: "..." } | { title: "...", items: ["...", "..."] }
-          ],
+          documents: ["markdown 1", "<!-- PAGE_BREAK -->", "markdown 2"],
           template: "github"
         }
 [ remote_docs (Hono/Node.js) ]
         ├─ JWT 验证
         ├─ 解析请求结构
         ├─ 处理 config（标题、版权、作者等）
-        ├─ 处理 chapter（章节标题，分页控制）
-        ├─ 解析 items 中的每个 markdown 为 HTML
+        ├─ 解析 documents 中每个 markdown 字符串为 HTML
         ├─ 合并 HTML + 添加分页样式
         └─ 转发到 Gotenberg
         ↓
@@ -54,9 +51,8 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Mark
 1. 客户端发送 POST /api/v1/pdf/export
    - JWT Token (Supabase)
    - config 对象（可选）：caption, copyright, author, date 等
-   - documents 数组（必需）：
-     - { chapter: "章节名" } - 章节标题（可选）
-     - { title: "标题", items: ["md1", "md2"] } - 内容项
+   - documents 数组（必需）：字符串数组，每个元素为 markdown 内容
+     - 如 ["# Chapter 1\n\ncontent...", "<!-- PAGE_BREAK -->", "# Chapter 2"]
    - template 选项（可选，默认 base）
    - options（可选）：format, margin, showPageNumber, watermark, cssVars 等
 
@@ -64,9 +60,9 @@ remote_docs 是 Gotenberg PDF 服务的轻量级封装，专注于将多个 Mark
    - 验证 JWT
    - 验证请求参数
    - 生成 config 头部 HTML（如果有）
-   - 处理每个 document item：
-     - chapter → 大标题（第一个与 config 同页，其余新页）
-     - content → 拼接所有 items 的 HTML
+   - 处理 documents 中的每个字符串：
+     - 解析 markdown 为 HTML
+     - <!-- PAGE_BREAK --> 转换为分页样式
    - 合并 HTML，添加分页样式
    - 添加页眉页脚（支持页码）
 
@@ -114,12 +110,9 @@ remote_docs/
 支持多种分页控制（所有功能均为可选）：
 
 1. **config 部分**（可选）：显示在首页顶部
-2. **chapter 章节**（可选）：
-   - 有 config 时：第一个 chapter 与 config 同页
-   - 无 config 时：第一个 chapter 在首页
-   - 后续 chapter 强制开始新页面 (`page-break-before: always`)
-3. **content 内容**：跟随前面的内容
-4. **无 chapter 时**：所有 content 项按顺序连续排列
+2. **强制分页**：在 markdown 中使用 `<!-- PAGE_BREAK -->` 注释
+3. **自然分页**：内容超出一页时自动分页
+4. **层次结构**：通过 markdown 标题（# ## ###）控制
 
 CSS 实现：
 
