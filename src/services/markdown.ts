@@ -22,6 +22,33 @@ export function parseMarkdown(content: string): string {
 
   // 然后处理LaTeX公式，避免Markdown解析器干扰LaTeX语法
 
+  // 首先保护转义的美元符号，避免被当作公式分隔符
+  const escapedDollars: string[] = [];
+  processed = processed.replace(/\\\$/g, () => {
+    const index = escapedDollars.length;
+    escapedDollars.push('$');
+    return `%%ESCAPED_DOLLAR_${index}%%`;
+  });
+
+  // 将标准 LaTeX 环境转换为 KaTeX 兼容格式
+  // \begin{equation}...\end{equation} → $$...$$
+  processed = processed.replace(/\\begin\{equation\}([\s\S]+?)\\end\{equation\}/g, '$$$$$1$$$$');
+
+  // \begin{align}...\end{align} → $$...$$
+  processed = processed.replace(/\\begin\{align\}([\s\S]+?)\\end\{align\}/g, '$$$$$1$$$$');
+
+  // \begin{gather}...\end{gather} → $$...$$
+  processed = processed.replace(/\\begin\{gather\}([\s\S]+?)\\end\{gather\}/g, '$$$$$1$$$$');
+
+  // \begin{displaymath}...\end{displaymath} → $$...$$
+  processed = processed.replace(/\\begin\{displaymath\}([\s\S]+?)\\end\{displaymath\}/g, '$$$$$1$$$$');
+
+  // \[...\] → $$...$$ (块级公式)
+  processed = processed.replace(/\\\[\s*([\s\S]+?)\s*\\\]/g, '$$$$$1$$$$');
+
+  // \(...\) → $...$ (行内公式)
+  processed = processed.replace(/\\\(\s*([^\n]+?)\s*\\\)/g, '$$$1$');
+
   // 临时替换块级公式以保护它们
   const blockFormulas: string[] = [];
   processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) => {
@@ -71,6 +98,11 @@ export function parseMarkdown(content: string): string {
 
   // 最后处理分页标记 - 在Markdown渲染后替换为HTML（处理所有出现）
   html = html.replaceAll(PAGE_BREAK_PLACEHOLDER, PAGE_BREAK_HTML);
+
+  // 恢复转义的美元符号
+  escapedDollars.forEach((_, index) => {
+    html = html.replace(`%%ESCAPED_DOLLAR_${index}%%`, '$');
+  });
 
   return html;
 }
